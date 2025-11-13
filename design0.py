@@ -52,11 +52,39 @@ def second_moment_of_area(geometry, y_bar):
         I_total += I + list(list_areas.values())[i] * d_sq
     return I_total
 
+# reaction forces
+
+# loads = [(load1, position1), (load2, position2), ...]
+
+def reaction_forces(loads, span):
+    A_y = 0
+    B_y = 0
+    loc_A_y = span / 2 - 600
+    loc_B_y = span / 2 + 600
+    total_load = 0
+    for load in loads:
+        total_load += load[0]
+    # find B_y taking moment about A
+    M_A = 0
+    for load in loads:
+            M_A -= load[0]*(loc_A_y - load[1])
+    print(M_A)
+    B_y = M_A / 1200
+    A_y = total_load - B_y
+    return A_y, B_y
+
+
 
 
 if __name__ == "__main__":
-    geometry = {"A1": [(0, 75), 100, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(10, 0), 80, 1.27]}
-    centroidal_axis = calculate_centroidal_axis(geometry)
-    print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
-    I = second_moment_of_area(geometry, centroidal_axis)
-    print(f"Second Moment of Area (I): {I:.4f} mm^4")
+    #geometry = {"A1": [(0, 75), 100, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(10, 0), 80, 1.27]}
+    #centroidal_axis = calculate_centroidal_axis(geometry)
+    #print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
+    #I = second_moment_of_area(geometry, centroidal_axis)
+    #print(f"Second Moment of Area (I): {I:.4f} mm^4")
+    #loads = [(67.5, 172), (67.5, 348), (67.5, 512), (67.5, 688), (91.0, 852), (91.0, 1028)]
+    #span = 1200
+    loads = [(50, 25), (100, 1275)]
+    span = 1300
+    A_y, B_y = reaction_forces(loads, span)
+    print(f"Reaction Forces: A_y = {A_y:.2f} N, B_y = {B_y:.2f} N")
