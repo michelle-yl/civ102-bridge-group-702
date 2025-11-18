@@ -71,10 +71,56 @@ def reaction_forces(loads, span):
     print(M_A)
     B_y = M_A / 1200
     A_y = total_load - B_y
-    return A_y, B_y
+    return [(A_y, loc_A_y), (B_y, loc_B_y)]
+
+def update_loads(loads, span):
+    # assume loads move left to right, leftmost load begins at x = 0
+
+
+def calculate_shear_force(loads, reaction_forces, span):
+    shear_force_diagram = []
+    V = 0
+    for x in range(span):
+        for force in reaction_forces:
+            if force[1] == x:
+                V += force[0]
+        for load in loads:
+            if load[1] == x:
+                V -= load[0]
+        shear_force_diagram.append([x, V])
+    return shear_force_diagram
 
 
 
+# max shear stress at a location x
+# I = {I: (start, end), }
+def max_shear_stress(shear_force_diagram, Q, I, b):
+    SFD = shear_force_diagram[:]
+    for value in SFD:
+        value[1] = abs(value[1])
+    
+    V_maxes = []
+    for i in I:
+        max_V = max(SFD[i[0]:i[1]])
+        V_maxes.append(max_V)
+    
+    shear_stresses = []
+    
+    
+        
+
+
+
+
+# safety factor
+
+def safety_factor(applied_stress, type):
+    # all stresses in MPa
+    allowable_stresses = {tensile: 30, compressive: 6, shear: 4, cement_shear: 1.5} #cement_shear is actually 2, but that's only if properly cured
+    return allowable_stresses[type] / applied_stress
+
+def initialize_loads():
+    return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
 
 if __name__ == "__main__":
     #geometry = {"A1": [(0, 75), 100, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(10, 0), 80, 1.27]}
