@@ -157,25 +157,35 @@ def calculate_BMD(SFD):
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 # assume geometry is organized from bottom to top of cross-section.  The last component, An, is the topmost component.
 def flexural_stress_diagram(BMD, I):
+
     flexural_compression_diagram = []
+    flexural_tension_diagram = []
+    
     for i in range(len(I)):
         geometry = I[i][1]
         upper_component_dimensions = geometry.values()[-1]
         height = upper_component_dimensions[0][1] + upper_component_dimensions[2]
+        y_bar = calculate_centroidal_axis(geometry)
+        y_compression = height - y_bar
+        y_tension = y_bar
 
         for x in range(I[i][2][0], I[i][2][1]):
 
+            sigma_compression = BMD[x][1] * y_compression / I[i][0]
+            sigma_tension = BMD[x][1] * y_tension / I[i][0]
 
-            stress = MY/I
+            flexural_compression_diagram.append([x, sigma_compression])
+            flexural_tension_diagram.append([x, sigma_tension])
 
-    for x in BMD:
+    return flexural_compression_diagram, flexural_tension_diagram
 
+# calculate plate buckling stress
 
 # safety factor
 
 def safety_factor(applied_stress, type):
     # all stresses in MPa
-    allowable_stresses = {tensile: 30, compressive: 6, shear: 4, cement_shear: 1.5} #cement_shear is actually 2, but that's only if properly cured
+    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
     return allowable_stresses[type] / applied_stress
 
 def initialize_loads():
@@ -192,4 +202,4 @@ if __name__ == "__main__":
     loads = [(50, 25), (100, 1275)]
     span = 1300
     A_y, B_y = reaction_forces(loads, span)
-    print(f"Reaction Forces: A_y = {A_y:.2f} N, B_y = {B_y:.2f} N")
+    print(safety_factor(10, tensile))
