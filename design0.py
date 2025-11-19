@@ -166,7 +166,7 @@ def flexural_stress_diagram(BMD, I):
         upper_component_dimensions = geometry.values()[-1]
         height = upper_component_dimensions[0][1] + upper_component_dimensions[2]
         y_bar = calculate_centroidal_axis(geometry)
-        y_compression = height - y_bar
+        y_compression = y_bar - height
         y_tension = y_bar
 
         for x in range(I[i][2][0], I[i][2][1]):
@@ -176,6 +176,8 @@ def flexural_stress_diagram(BMD, I):
 
             flexural_compression_diagram.append([x, sigma_compression])
             flexural_tension_diagram.append([x, sigma_tension])
+            
+    return flexural_compression_diagram, flexural_tension_diagram
 
     # for x in BMD:
 
