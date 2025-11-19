@@ -203,6 +203,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
         k = 0.425
         sigma = k * (3.14159**2) * 4000 * (t / b)**2 / (12 * (1 - 0.2**2))
         return sigma
+    
     # case 3: buckling of the webs due to the flexural stresses
     if case == 3:
         t = 1.27 # thickness of web
@@ -210,6 +211,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
         k = 6
         sigma = k * (3.14159**2) * 4000 * (t / h)**2 / (12 * (1 - 0.2**2))
         return sigma
+    
     # case 4: buckling of the webs due to the shear stresses
     if case == 4:
         t = 1.27 # thickness of web
