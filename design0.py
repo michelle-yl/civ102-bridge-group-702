@@ -99,7 +99,7 @@ def calculate_shear_force(loads, reaction_forces, span):
 
 
 # max shear stress at a location x
-# I = [[I, geometry, (start, end)], ...]
+# I = [[I1, geometry, (start, end)], ...]
 def shear_stress_diagram(shear_force_diagram, I, b):
     Q_maxs = []
     for i in range(len(I)):
@@ -163,7 +163,7 @@ def flexural_stress_diagram(BMD, I):
     
     for i in range(len(I)):
         geometry = I[i][1]
-        upper_component_dimensions = geometry.values()[-1]
+        upper_component_dimensions = list(geometry.values())[-1]
         height = upper_component_dimensions[0][1] + upper_component_dimensions[2]
         y_bar = calculate_centroidal_axis(geometry)
         y_compression = y_bar - height
@@ -176,25 +176,35 @@ def flexural_stress_diagram(BMD, I):
 
             flexural_compression_diagram.append([x, sigma_compression])
             flexural_tension_diagram.append([x, sigma_tension])
-            
+
     return flexural_compression_diagram, flexural_tension_diagram
 
     # for x in BMD:
 
 # calculate plate buckling stress
 
+# case 1: buckling of compressive flange between webs
+
+# case 2: buckling of the tips of the compressive flange
+
+# case 3: buckling of the webs due to the flexural stresses
+
+# case 4: buckling of the webs due to the shear stresses
+
+# shear glue stress
+
 # safety factor
 
-# def safety_factor(applied_stress, type):
-#     # all stresses in MPa
-#     allowable_stresses = {tensile: 30, compressive: 6, shear: 4, cement_shear: 1.5} #cement_shear is actually 2, but that's only if properly cured
-#     return allowable_stresses[type] / applied_stress
+def safety_factor(applied_stress, type):
+    all stresses in MPa
+    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
+    return allowable_stresses[type] / applied_stress
 
-# def initialize_loads():
-#     return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
+def initialize_loads():
+    return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
 
 if __name__ == "__main__":
-    #geometry = {"A1": [(0, 75), 100, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(10, 0), 80, 1.27]}
+    geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(0, 75), 100, 1.27]}
     #centroidal_axis = calculate_centroidal_axis(geometry)
     #print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
     #I = second_moment_of_area(geometry, centroidal_axis)
