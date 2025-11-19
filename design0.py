@@ -133,10 +133,10 @@ def shear_stress_diagram(shear_force_diagram, I, b):
 
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 def calculate_Qmax(geometry):
-    geo_below_ybar = geometry
+    geo_below_ybar = geometry.copy()
     y_bar = calculate_centroidal_axis(geometry)
     for component in geo_below_ybar.values():
-        if component[2] > y_bar:
+        if component[2] + component[0][1] > y_bar:
             component[2] = y_bar
     y_bar_below = calculate_centroidal_axis(geo_below_ybar)
     area_below = areas(geo_below_ybar)
@@ -237,8 +237,9 @@ def shear_glue_stress_diagram(shear_force_diagram, I, level, layers): # level is
         if level == 1 and layers == 2:
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
-
+            A = # finish this later
             d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
+            b = # finish this later
 
         if level == 2 and layers == 2:
             upper_component_dimensions = list(geometry.values())[-level]
