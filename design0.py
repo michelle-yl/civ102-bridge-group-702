@@ -192,11 +192,29 @@ def flexural_stress_diagram(BMD, I):
 # case 4: buckling of the webs due to the shear stresses
 
 # shear glue stress
+def shear_glue_stress_diagram(shear_force_diagram, I, level):
+    shear_glue_stresses_diagram = []
+    for i in range(len(I)):
+        geometry = I[i][1]
+        upper_component_dimensions = list(geometry.values())[-1]
+        d = upper_component_dimensions[2]/2 # Q from top shear-stress free surface
+        A = upper_component_dimensions[1] * upper_component_dimensions[2] * d
+        Q = A * d
+
+        b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the glue line length
+        
+        for x in range(I[i][2][0], I[i][2][1]):
+            shear_glue_stress = SFD[x][1] * Q / (I[i][0] * b)
+            shear_glue_stresses_diagram.append([x, shear_stress])
+
+
+            flexural_compression_diagram.append([x, sigma_compression])
+            flexural_tension_diagram.append([x, sigma_tension])
 
 # safety factor
 
 def safety_factor(applied_stress, type):
-    all stresses in MPa
+    # all stresses in MPa
     allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
     return allowable_stresses[type] / applied_stress
 
