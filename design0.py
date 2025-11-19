@@ -107,17 +107,17 @@ def max_shear_stress(shear_force_diagram, I, b):
     
     V_maxs = []
     for i in I:
-        max_V = max(SFD[i[2][0]:i[2][1]])
-        V_maxs.append(max_V)
-    
+        slice_of_SFD = SFD[i[2][0]:i[2][1]]
+        max_V = max(SFD, key = lambda x: x[1])
+        V_maxs.append(max_V)   
 
     shear_stresses = []
     for i in range(len(V_maxs)):
         Q = calculate_Qmax(I[i][1])
         tau = V_maxs[i] * Q / (I[i][0] * b)
-        shear_stresses.append(tau)
+        shear_stresses.append([tau, I[i][0]])
+    return shear_stresses
 
-    ### connect I to its geometry for shear stress calculation
 def calculate_Qmax(geometry):
     geo_below_ybar = geometry
     y_bar = calculate_centroidal_axis(geometry)
@@ -129,8 +129,14 @@ def calculate_Qmax(geometry):
     return area_below * (y_bar - y_bar_below)
         
 
-
-# geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
+# find BMD
+def calculate_BMD(SFD):
+    bending_moment_diagram = []
+    M = 0
+    for x in SFD:
+        M += x[1]
+        BMD.append([x[0], M])
+    return bending_moment_diagram
 
 # safety factor
 
