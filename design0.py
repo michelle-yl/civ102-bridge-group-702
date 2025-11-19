@@ -177,19 +177,19 @@ def flexural_stress_diagram(BMD, I):
             flexural_compression_diagram.append([x, sigma_compression])
             flexural_tension_diagram.append([x, sigma_tension])
 
-    return flexural_compression_diagram, flexural_tension_diagram
+    # for x in BMD:
 
 # calculate plate buckling stress
 
 # safety factor
 
-def safety_factor(applied_stress, type):
-    # all stresses in MPa
-    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
-    return allowable_stresses[type] / applied_stress
+# def safety_factor(applied_stress, type):
+#     # all stresses in MPa
+#     allowable_stresses = {tensile: 30, compressive: 6, shear: 4, cement_shear: 1.5} #cement_shear is actually 2, but that's only if properly cured
+#     return allowable_stresses[type] / applied_stress
 
-def initialize_loads():
-    return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
+# def initialize_loads():
+#     return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
 
 if __name__ == "__main__":
     #geometry = {"A1": [(0, 75), 100, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(10, 0), 80, 1.27]}
