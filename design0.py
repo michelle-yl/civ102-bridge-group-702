@@ -4,15 +4,14 @@
 
 # calculating centroidal axis
 def areas(geometry):
-    # areas = {A1: area1, A2: area2, ...}
     print(geometry.items())
-    areas = {}
+    areas_dict = {}
     for key, value in geometry.items():
         width = value[1]
         height = value[2]
         area = width * height
-        areas[key] = area
-    return areas
+        areas_dict[key] = area
+    return areas_dict # areas = {A1: area1, A2: area2, ...}
 
 def find_centroids(geometry):
     centroids = []
@@ -74,6 +73,8 @@ def reaction_forces(loads, span):
     return [(A_y, loc_A_y), (B_y, loc_B_y)]
 
 def update_loads(loads, span):
+    for load in loads:
+        load[1] += 1
     # assume loads move left to right, leftmost load begins at x = 0
 
 
@@ -93,24 +94,38 @@ def calculate_shear_force(loads, reaction_forces, span):
 
 
 # max shear stress at a location x
-# I = {I: (start, end), }
-def max_shear_stress(shear_force_diagram, Q, I, b):
+# I = [[I, geometry, (start, end)], ...]
+def max_shear_stress(shear_force_diagram, I, b):
     SFD = shear_force_diagram[:]
     for value in SFD:
         value[1] = abs(value[1])
     
-    V_maxes = []
+    V_maxs = []
     for i in I:
-        max_V = max(SFD[i[0]:i[1]])
-        V_maxes.append(max_V)
+        max_V = max(SFD[i[2][0]:i[2][1]])
+        V_maxs.append(max_V)
     
+
     shear_stresses = []
-    
-    
+    for i in range(len(V_maxs)):
+        Q = calculate_Qmax(I[i][1])
+        tau = V_maxs[i] * Q / (I[i][0] * b)
+        shear_stresses.append(tau)
+
+    ### connect I to its geometry for shear stress calculation
+def calculate_Qmax(geometry):
+    geo_below_ybar = geometry
+    y_bar = calculate_centroidal_axis(geometry)
+    for component in geo_below_ybar.values():
+        if component[2] > y_bar:
+            component[2] = y_bar
+    y_bar_below = calculate_centroidal_axis(geo_below_ybar)
+    area_below = areas(geo_below_ybar)
+    return area_below * (y_bar - y_bar_below)
         
 
 
-
+# geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 
 # safety factor
 
