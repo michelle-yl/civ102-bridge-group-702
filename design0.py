@@ -78,6 +78,11 @@ def update_loads(loads, span):
     # assume loads move left to right, leftmost load begins at x = 0
 
 
+# Params:
+# (list) loads: list of tuples (magnitude of load, location)
+# (list) reaction_forces: list of tuples (magnitude of force, location)
+# (int)  span: length of bridge
+
 def calculate_shear_force(loads, reaction_forces, span):
     shear_force_diagram = []
     V = 0
