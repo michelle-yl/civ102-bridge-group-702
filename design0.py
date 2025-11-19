@@ -104,11 +104,11 @@ def shear_stress_diagram(shear_force_diagram, I, b):
     Q_maxs = []
     for i in range(len(I)):
         Q = calculate_Qmax(I[i][1])
-        Q.append(Q)
+        Q_maxs.append(Q)
     shear_stresses_diagram = []
     SFD = shear_force_diagram[:]
     for i in range(len(I)):
-        for x in range(I_value[2][0], I_value[2][1]):
+        for x in range(I[i][2][0], I[i][2][1]):
             shear_stress = SFD[x][1] * Q_maxs[i] / (I[i][0] * b)
             shear_stresses_diagram.append([x, shear_stress])
     return shear_stresses_diagram
@@ -183,33 +183,75 @@ def flexural_stress_diagram(BMD, I):
 
 # calculate plate buckling stress
 
-# case 1: buckling of compressive flange between webs
+# geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
+def plate_buckling_stress(geometry, case, layers, a = None):
+    if layers == 2:
+        t = list(geometry.values())[-1][2] + list(geometry.values())[-2][2] # thickness of flange or web
+    else:
+        t = list(geometry.values())[-1][2]
 
-# case 2: buckling of the tips of the compressive flange
+    # case 1: buckling of compressive flange between webs
+    if case == 1:
+        b = list(geometry.values())[-1][1] - list(geometry.values())[-layers][0][0] * 2 # width of flange between webs
+        k = 4
+        sigma = k * (3.14159**2) * 4000 * (t / b)**2 / (12 * (1 - 0.2**2))
+        return sigma
+    
+    # case 2: buckling of the tips of the compressive flange
+    if case == 2:
+        b = list(geometry.values())[-layers][0][0] # length of flange tip beyond web
+        k = 0.425
+        sigma = k * (3.14159**2) * 4000 * (t / b)**2 / (12 * (1 - 0.2**2))
+        return sigma
+    # case 3: buckling of the webs due to the flexural stresses
+    if case == 3:
+        t = 1.27 # thickness of web
+        h = list(geometry.values())[-layers][2] # height of web
+        k = 6
+        sigma = k * (3.14159**2) * 4000 * (t / h)**2 / (12 * (1 - 0.2**2))
+        return sigma
+    # case 4: buckling of the webs due to the shear stresses
+    if case == 4:
+        t = 1.27 # thickness of web
+        h = list(geometry.values())[-layers][2] # height of web
+        k = 5
+        tau = k * (3.14159**2) * 4000 * ((t / h)**2 + (t / a)**2) / (12 * (1 - 0.2**2))
+        return tau
 
-# case 3: buckling of the webs due to the flexural stresses
 
-# case 4: buckling of the webs due to the shear stresses
+
 
 # shear glue stress
-def shear_glue_stress_diagram(shear_force_diagram, I, level):
+def shear_glue_stress_diagram(shear_force_diagram, I, level, layers): # level is an integer indicating which glue line to analyze, counting from the top down
     shear_glue_stresses_diagram = []
     for i in range(len(I)):
         geometry = I[i][1]
-        upper_component_dimensions = list(geometry.values())[-1]
-        d = upper_component_dimensions[2]/2 # Q from top shear-stress free surface
-        A = upper_component_dimensions[1] * upper_component_dimensions[2] * d
+        if level == 1 and layers == 1:
+            upper_component_dimensions = list(geometry.values())[-level]
+            d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
+            A = upper_component_dimensions[1] * upper_component_dimensions[2] * d
+            b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the glue line length
+        
+        if level == 1 and layers == 2:
+            upper_component_dimensions = list(geometry.values())[-level]
+            second_upper_component_dimensions = list(geometry.values())[-(level-1)]
+
+            d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
+
+        if level == 2 and layers == 2:
+            upper_component_dimensions = list(geometry.values())[-level]
+            second_upper_component_dimensions = list(geometry.values())[-(level-1)]
+            d = upper_component_dimensions[0][1] + upper_component_dimensions[2] - calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) # d from centroid of area above glue line to top shear-stress free surface
+            A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2])
+            b = list(geometry.values())[-3][1]*2 # assume the third-to-top component is the web with glue tab, so its width*2 is the glue line length
+        
         Q = A * d
 
-        b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the glue line length
-        
         for x in range(I[i][2][0], I[i][2][1]):
-            shear_glue_stress = SFD[x][1] * Q / (I[i][0] * b)
-            shear_glue_stresses_diagram.append([x, shear_stress])
+            shear_glue_stress = shear_force_diagram[x][1] * Q / (I[i][0] * b)
+            shear_glue_stresses_diagram.append([x, shear_glue_stress])
 
-
-            flexural_compression_diagram.append([x, sigma_compression])
-            flexural_tension_diagram.append([x, sigma_tension])
+    return shear_glue_stresses_diagram
 
 # safety factor
 
@@ -232,4 +274,4 @@ if __name__ == "__main__":
     loads = [(50, 25), (100, 1275)]
     span = 1300
     A_y, B_y = reaction_forces(loads, span)
-    print(safety_factor(10, tensile))
+    print(safety_factor(10, "tensile"))
