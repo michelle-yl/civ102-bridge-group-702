@@ -100,24 +100,38 @@ def calculate_shear_force(loads, reaction_forces, span):
 
 # max shear stress at a location x
 # I = [[I, geometry, (start, end)], ...]
-def max_shear_stress(shear_force_diagram, I, b):
-    SFD = shear_force_diagram[:]
-    for value in SFD:
-        value[1] = abs(value[1])
-    
-    V_maxs = []
-    for i in I:
-        max_V = max(SFD[i[2][0]:i[2][1]])
-        V_maxs.append(max_V)
-    
-
-    shear_stresses = []
-    for i in range(len(V_maxs)):
+def shear_stress_diagram(shear_force_diagram, I, b):
+    Q_maxs = []
+    for i in range(len(I)):
         Q = calculate_Qmax(I[i][1])
-        tau = V_maxs[i] * Q / (I[i][0] * b)
-        shear_stresses.append(tau)
+        Q.append(Q)
+    shear_stresses_diagram = []
+    SFD = shear_force_diagram[:]
+    for i in range(len(I)):
+        for x in range(I_value[2][0], I_value[2][1]):
+            shear_stress = SFD[x][1] * Q_maxs[i] / (I[i][0] * b)
+            shear_stresses_diagram.append([x, shear_stress])
+    return shear_stresses_diagram
 
-    ### connect I to its geometry for shear stress calculation
+   # for x in SFD:
+
+   # for value in SFD:
+   #     value[1] = abs(value[1])
+    
+   # V_maxs = []
+   # for i in I:
+   #     slice_of_SFD = SFD[i[2][0]:i[2][1]]
+   #     max_V = max(SFD, key = lambda x: x[1])
+   #     V_maxs.append(max_V)   
+
+   # shear_stresses = []
+   # for i in range(len(V_maxs)):
+   #     Q = calculate_Qmax(I[i][1])
+   #     tau = V_maxs[i] * Q / (I[i][0] * b)
+   #     shear_stresses.append([tau, I[i][0]])
+   # return shear_stresses
+
+# geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 def calculate_Qmax(geometry):
     geo_below_ybar = geometry
     y_bar = calculate_centroidal_axis(geometry)
@@ -129,8 +143,33 @@ def calculate_Qmax(geometry):
     return area_below * (y_bar - y_bar_below)
         
 
+# find BMD
+def calculate_BMD(SFD):
+    bending_moment_diagram = []
+    M = 0
+    for x in SFD:
+        M += x[1]
+        bending_moment_diagram.append([x[0], M])
+    return bending_moment_diagram
 
+# find max flexural stress
+# I = [[I, geometry, (start, end)], ...]
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
+# assume geometry is organized from bottom to top of cross-section.  The last component, An, is the topmost component.
+def flexural_stress_diagram(BMD, I):
+    flexural_compression_diagram = []
+    for i in range(len(I)):
+        geometry = I[i][1]
+        upper_component_dimensions = geometry.values()[-1]
+        height = upper_component_dimensions[0][1] + upper_component_dimensions[2]
+
+        for x in range(I[i][2][0], I[i][2][1]):
+
+
+            stress = MY/I
+
+    for x in BMD:
+
 
 # safety factor
 
