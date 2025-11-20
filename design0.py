@@ -6,7 +6,7 @@ import math
 
 # calculating centroidal axis
 def areas(geometry):
-    print(geometry.items())
+    # print(geometry.items())
     areas_dict = {}
     for key, value in geometry.items():
         width = value[1]
@@ -69,7 +69,7 @@ def reaction_forces(loads, span):
     M_A = 0
     for load in loads:
             M_A -= load[0]*(loc_A_y - load[1])
-    print(M_A)
+    # print(M_A)
     B_y = M_A / 1200
     A_y = total_load - B_y
     return [(A_y, loc_A_y), (B_y, loc_B_y)]
@@ -93,9 +93,9 @@ def update_loads(loads, direction):
 def calculate_shear_force(loads, reaction_forces, span):
     shear_force_diagram = []
     V = 0
-    for x in range(span):
+    for x in range(span+1):
         for force in reaction_forces:
-            if force[1] == x:
+            if force[1] == x and x != 1200:
                 V += force[0]
         for load in loads:
             if load[1] == x:
@@ -103,40 +103,35 @@ def calculate_shear_force(loads, reaction_forces, span):
         shear_force_diagram.append([x, V])
     return shear_force_diagram
 
+def calculate_envs(load_mag, span, geometry):
+    react = reaction_forces(load_mag, span)
+    sf = calculate_shear_force(load_mag, react, span)
 
+    bm = calculate_BMD(sf)
+
+    y_bar = calculate_centroidal_axis(geometry)
+    I = second_moment_of_area(geometry, y_bar)
+    I_list = [[I, geometry, (0,span)]]
+    flex_stress = flexural_stress_diagram(bm, I_list)
+    flex_comp = flex_stress[0]
+    flex_tens = flex_stress[1]
+    
+    return [sf, bm, flex_comp, flex_tens]
 
 # max shear stress at a location x
-# I = [[I1, geometry, (start, end), layers], ...]
-def shear_stress_diagram(shear_force_diagram, I):
+# I = [[I1, geometry, (start, end)], ...]
+def shear_stress_diagram(shear_force_diagram, I_list, b):
     Q_maxs = []
-    for i in range(len(I)):
-        Q = calculate_Qmax(I[i][1])
+    for i in range(len(I_list)):
+        Q = calculate_Qmax(I_list[i][1])
         Q_maxs.append(Q)
     shear_stresses_diagram = []
     SFD = shear_force_diagram[:]
-    for i in range(len(I)):
-        for x in range(I[i][2][0], I[i][2][1]):
-            shear_stress = SFD[x][1] * Q_maxs[i] / (I[i][0] * 1.27*2) # b is web thickness * 2
+    for i in range(len(I_list)):
+        for x in range(I_list[2][0], I_list[2][1]):
+            shear_stress = SFD[x][1] * Q_maxs[i] / (I_list[i][0] * b)
             shear_stresses_diagram.append([x, shear_stress])
     return shear_stresses_diagram
-
-   # for x in SFD:
-
-   # for value in SFD:
-   #     value[1] = abs(value[1])
-    
-   # V_maxs = []
-   # for i in I:
-   #     slice_of_SFD = SFD[i[2][0]:i[2][1]]
-   #     max_V = max(SFD, key = lambda x: x[1])
-   #     V_maxs.append(max_V)   
-
-   # shear_stresses = []
-   # for i in range(len(V_maxs)):
-   #     Q = calculate_Qmax(I[i][1])
-   #     tau = V_maxs[i] * Q / (I[i][0] * b)
-   #     shear_stresses.append([tau, I[i][0]])
-   # return shear_stresses
 
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 def calculate_Qmax(geometry):
