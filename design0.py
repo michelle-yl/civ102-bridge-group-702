@@ -53,7 +53,7 @@ def second_moment_of_area(geometry, y_bar):
 
 # reaction forces
 
-# loads = [(load1, position1), (load2, position2), ...]
+# loads = [[load1, position1], [load2, position2], ...]
 
 def reaction_forces(loads, span):
     A_y = 0
@@ -84,7 +84,7 @@ def update_loads(loads, direction):
 
 
 # Params:
-# (list) loads: list of tuples (magnitude of load, location)
+# (list) loads: list of lists [magnitude of load, location]
 # (list) reaction_forces: list of tuples (magnitude of force, location)
 # (int)  span: length of bridge
 
@@ -105,7 +105,7 @@ def calculate_shear_force(loads, reaction_forces, span):
 
 # max shear stress at a location x
 # I = [[I1, geometry, (start, end), layers], ...]
-def shear_stress_diagram(shear_force_diagram, I, b):
+def shear_stress_diagram(shear_force_diagram, I):
     Q_maxs = []
     for i in range(len(I)):
         Q = calculate_Qmax(I[i][1])
@@ -114,7 +114,7 @@ def shear_stress_diagram(shear_force_diagram, I, b):
     SFD = shear_force_diagram[:]
     for i in range(len(I)):
         for x in range(I[i][2][0], I[i][2][1]):
-            shear_stress = SFD[x][1] * Q_maxs[i] / (I[i][0] * b)
+            shear_stress = SFD[x][1] * Q_maxs[i] / (I[i][0] * 1.27*2) # b is web thickness * 2
             shear_stresses_diagram.append([x, shear_stress])
     return shear_stresses_diagram
 
@@ -271,16 +271,128 @@ def safety_factor(applied_stress, type):
     allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
     return allowable_stresses[type] / applied_stress
 
-def safety_factor_thin_plate():
+# I = [[I_value, geometry, (start, end), layers], ...]
+# In = [I_value, geometry, (start, end), layers]
+def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diagram, a = None):
+    geometry = In[1]
+    layers = In[3]
+
     case_1_failure = plate_buckling_stress(geometry, 1, layers)
+    max_flex_comp = max(flexural_compression_diagram, key = lambda x: abs(x[1]))[1]
+    FOS1 = case_1_failure / abs(max_flex_comp)
 
     case_2_failure = plate_buckling_stress(geometry, 2, layers)
-    case_3_failure = plate_buckling_stress(geometry, 3, layers)
-    case_4_failure = plate_buckling_stress(geometry, 4, layers, a = 400)
+    FOS2 = case_2_failure / abs(max_flex_comp)
 
+    case_3_failure = plate_buckling_stress(geometry, 3, layers)
+    FOS3 = case_3_failure / abs(max_flex_comp)
+
+    case_4_failure = plate_buckling_stress(geometry, 4, layers, a)
+    max_shear = max(shear_stress_diagram, key = lambda x: abs(x[1]))[1]
+    FOS4 = case_4_failure / abs(max_shear) # ***double check the theory behind these calculations***
+
+    return FOS1, FOS2, FOS3, FOS4
 
 def initialize_loads():
     return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
+
+def simulation_safety_factors(loads, span, I):
+    min_safety_factors = {"flexural tension": 1000, "flexural compression": 1000, "shear": 1000, "cement shear": 1000, "case 1": 1000, "case 2": 1000, "case 3": 1000, "case 4": 1000} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
+    for x in range(span - loads[-1][1]):
+        # shear stress
+        shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I)
+        max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
+        FOS_shear = safety_factor(max_shear, "shear")
+        if FOS_shear < min_safety_factors["shear"]:
+            min_safety_factors["shear"] = FOS_shear
+        
+        # flexural stress and flexural tension
+
+        BMD = calculate_BMD(SFD)
+        flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
+        max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
+        FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
+
+        if FOS_flex_tens < min_safety_factors["flexural tension"]:
+            min_safety_factors["flexural tension"] = FOS_flex_tens
+        max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
+        FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
+
+        if FOS_flex_comp < min_safety_factors["flexural compression"]:
+            min_safety_factors["flexural compression"] = FOS_flex_comp
+
+        # cement shear stress
+        reaction_forces_list = reaction_forces(loads, span)
+        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, 1)
+        max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
+        FOS_cement_shear = safety_factor(max_cement_shear, "cement_shear")
+        if FOS_cement_shear < min_safety_factors["cement shear"]:
+            min_safety_factors["cement shear"] = FOS_cement_shear
+        
+        # plate buckling
+        for i in range(len(I)):
+            geometry = I[i][1]
+            layers = I[i][3]
+            FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
+            if FOS1 < min_safety_factors["case 1"]:
+                min_safety_factors["case 1"] = FOS1
+            if FOS2 < min_safety_factors["case 2"]:
+                min_safety_factors["case 2"] = FOS2
+            if FOS3 < min_safety_factors["case 3"]:
+                min_safety_factors["case 3"] = FOS3
+            if FOS4 < min_safety_factors["case 4"]:
+                min_safety_factors["case 4"] = FOS4
+        
+        loads = update_loads(loads, "right")
+
+    for x in range(span - loads[-1][1]):
+        # shear stress
+        shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I)
+        max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
+        FOS_shear = safety_factor(max_shear, "shear")
+        if FOS_shear < min_safety_factors["shear"]:
+            min_safety_factors["shear"] = FOS_shear
+        
+        # flexural stress and flexural tension
+
+        BMD = calculate_BMD(SFD)
+        flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
+        max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
+        FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
+
+        if FOS_flex_tens < min_safety_factors["flexural tension"]:
+            min_safety_factors["flexural tension"] = FOS_flex_tens
+        max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
+        FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
+
+        if FOS_flex_comp < min_safety_factors["flexural compression"]:
+            min_safety_factors["flexural compression"] = FOS_flex_comp
+
+        # cement shear stress
+        reaction_forces_list = reaction_forces(loads, span)
+        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, 1)
+        max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
+        FOS_cement_shear = safety_factor(max_cement_shear, "cement_shear")
+        if FOS_cement_shear < min_safety_factors["cement shear"]:
+            min_safety_factors["cement shear"] = FOS_cement_shear
+        
+        # plate buckling
+        for i in range(len(I)):
+            geometry = I[i][1]
+            layers = I[i][3]
+            FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
+            if FOS1 < min_safety_factors["case 1"]:
+                min_safety_factors["case 1"] = FOS1
+            if FOS2 < min_safety_factors["case 2"]:
+                min_safety_factors["case 2"] = FOS2
+            if FOS3 < min_safety_factors["case 3"]:
+                min_safety_factors["case 3"] = FOS3
+            if FOS4 < min_safety_factors["case 4"]:
+                min_safety_factors["case 4"] = FOS4
+        
+        loads = update_loads(loads, "left")
+
+    return min_safety_factors
 
 if __name__ == "__main__":
     geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(0, 75), 100, 1.27]}
