@@ -403,6 +403,7 @@ if __name__ == "__main__":
     loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     #loads = [(50, 25), (100, 1275)]
     span = 1300
+    b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
     I = [[13690000, geometry, (0, 1300), 1]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
