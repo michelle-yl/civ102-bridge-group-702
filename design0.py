@@ -101,21 +101,6 @@ def calculate_shear_force(loads, reaction_forces, span):
         shear_force_diagram.append([x, V])
     return shear_force_diagram
 
-def calculate_envs(load_mag, span, geometry):
-    react = reaction_forces(load_mag, span)
-    sf = calculate_shear_force(load_mag, react, span)
-
-    bm = calculate_BMD(sf)
-
-    y_bar = calculate_centroidal_axis(geometry)
-    I = second_moment_of_area(geometry, y_bar)
-    I_list = [[I, geometry, (0,span)]]
-    flex_stress = flexural_stress_diagram(bm, I_list)
-    flex_comp = flex_stress[0]
-    flex_tens = flex_stress[1]
-    
-    return [sf, bm, flex_comp, flex_tens]
-
 # max shear stress at a location x
 # I = [[I1, geometry, (start, end)], ...]
 def shear_stress_diagram(shear_force_diagram, I_list, b):
@@ -126,7 +111,7 @@ def shear_stress_diagram(shear_force_diagram, I_list, b):
     shear_stresses_diagram = []
     SFD = shear_force_diagram[:]
     for i in range(len(I_list)):
-        for x in range(I_list[2][0], I_list[2][1]):
+        for x in range(I_list[i][2][0], I_list[i][2][1]):
             shear_stress = SFD[x][1] * Q_maxs[i] / (I_list[i][0] * b)
             shear_stresses_diagram.append([x, shear_stress])
     return shear_stresses_diagram
@@ -168,9 +153,10 @@ def flexural_stress_diagram(BMD, I):
         y_bar = calculate_centroidal_axis(geometry)
         y_compression = y_bar - height
         y_tension = y_bar
-
-        for x in range(I[i][2][0], I[i][2][1]):
-
+        print(BMD)
+        
+        for x in range(I[i][2][0], I[i][2][1]+1):
+            
             sigma_compression = BMD[x][1] * y_compression / I[i][0]
             sigma_tension = BMD[x][1] * y_tension / I[i][0]
 
@@ -252,7 +238,7 @@ def shear_glue_stress_diagram(shear_force_diagram, I, level): # level is an inte
         
         Q = A * d
 
-        for x in range(I[i][2][0], I[i][2][1]):
+        for x in range(I[i][2][0], I[i][2][1]+1):
             shear_glue_stress = shear_force_diagram[x][1] * Q / (I[i][0] * b)
             shear_glue_stresses_diagram.append([x, shear_glue_stress])
 
@@ -291,11 +277,11 @@ def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diag
 def initialize_loads():
     return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
 
-def simulation_safety_factors(loads, span, I):
+def simulation_safety_factors(loads, span, I, b):
     min_safety_factors = {"flexural tension": 1000, "flexural compression": 1000, "shear": 1000, "cement shear": 1000, "case 1": 1000, "case 2": 1000, "case 3": 1000, "case 4": 1000} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
     for x in range(span - loads[-1][1]):
         # shear stress
-        shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I)
+        shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I,b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
         FOS_shear = safety_factor(max_shear, "shear")
         if abs(FOS_shear) < min_safety_factors["shear"]:
@@ -390,6 +376,21 @@ def simulation_safety_factors(loads, span, I):
 
     return min_safety_factors
 
+def calculate_envs(load_mag, span, geometry, level):
+    react = reaction_forces(load_mag, span)
+    sf = calculate_shear_force(load_mag, react, span)
+
+    bm = calculate_BMD(sf)
+
+    y_bar = calculate_centroidal_axis(geometry)
+    I = second_moment_of_area(geometry, y_bar)
+    I_list = [[I, geometry, (0,span), level]]
+    comp, tens = flexural_stress_diagram(bm, I_list)
+
+    glue = shear_glue_stress_diagram(sf, I_list, level)
+    
+    return [sf, bm, comp, tens, glue]
+    
 if __name__ == "__main__":
     geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(88.73, 1.27), 1.27, 72.46], "A3": [(10, 1.27), 1.27, 72.46], "A4": [(83.73, 73.73), 6.27, 1.27], "A5": [(10, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
     #centroidal_axis = calculate_centroidal_axis(geometry)
@@ -399,7 +400,8 @@ if __name__ == "__main__":
     loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     #loads = [(50, 25), (100, 1275)]
     span = 1300
+    b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
     I = [[13690000, geometry, (0, 1300), 1]]
-    min_safety_factors = simulation_safety_factors(loads, span, I)
+    min_safety_factors = simulation_safety_factors(loads, span, I, b)
     print(min_safety_factors)

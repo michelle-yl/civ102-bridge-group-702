@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 from formatting import format_cursor
 import design0 as d0
 
-def init_plots(loads, span, geometry):
+def init_plots(loads, span, geometry, level):
     env_max = []
     env_min = []
-    for i in range(4):
+    for i in range(5):
         env_max_pts = []
         env_min_pts = []
         for j in range(span+1):
@@ -19,9 +19,9 @@ def init_plots(loads, span, geometry):
         load_mag.append([load_pair[0], (load_pair[1]-loads[0][1])])
     
     for i in range(span-856):
-        [sf, bm, comp, tens] = d0.calculate_envs(load_mag, span, geometry)
-        env_list = [sf, bm, comp, tens]
-        # print(sf)
+        [sf, bm, comp, tens, glue] = d0.calculate_envs(load_mag, span, geometry, level)
+        env_list = [sf, bm, comp, tens, glue]
+        # print(comp)
         max_min_list = []
         for k in range(len(env_list)):
             for pt in env_list[k]:
@@ -33,31 +33,34 @@ def init_plots(loads, span, geometry):
 
         for pair in load_mag:
             pair[1] += 1
-    sfe, bme, comp_e, tens_e = max_min_list
+    sfe, bme, comp_e, tens_e, glue_e = max_min_list
 
-    return sfe, bme, comp_e, tens_e
+    return sfe, bme, comp_e, tens_e, glue_e
 
 def plot_env(data, type):
     # print(data)
     labels = {
         "sfe": ["Shear Force Envelope", "Span (mm)", "Shear Force (N)"],
         "bme": ["Bending Moment Envelope", "Span (mm)", "Bending Moment (Nmm)"],
-        "comp": ["Flexural Compression Stress Envelope", "Span (mm)", "Flexural Compression Stress (N/mm²)"],
-        "tens_e": ["Flexural Tension Stress Envelope", "Span (mm)", "Flexural Tension Stress (N/mm²)"]
+        "comp_e": ["Flexural Compression Stress Envelope", "Span (mm)", "Flexural Compression Stress (MPa)"],
+        "tens_e": ["Flexural Tension Stress Envelope", "Span (mm)", "Flexural Tension Stress (MPa)"],
+        "glue_e":["Shear Glue Stress Envelope", "Span (mm)", "Shear Glue Stress (MPa)"]
     }
     title, xlabel, ylabel = labels.get(type, ("", "", ""))
 
     legends = {
         "sfe": ["Max Shear Force", "Min Shear Force"],
         "bme": ["Max Bending Moment", "Min Bending Moment"],
-        "comp": ["Max Flexural Compression Stress", "Min Flexural Compression Stress"],
+        "comp_e": ["Max Flexural Compression Stress", "Min Flexural Compression Stress"],
         "tens_e": ["Max Flexural Tension Stress", "Min Flexural Tension Stress"]
     }
     max_label, min_label = legends.get(type, ("max", "min"))
 
     plt.axhline(0,color='black')
     points = []
-    
+    max_x = None
+    max_y = None
+
     for i, set in enumerate(data):
         if i == 0:
             label = max_label
@@ -73,15 +76,36 @@ def plot_env(data, type):
             else:
                 y.append(pt[1])
         plt.plot([0, x[0]], [0, y[0]], color='steelblue')
+        plt.plot([x[-1], span], [y[-1], 0], color='steelblue')
         plt.plot(x, y, label=label)
         
         point = plt.plot(x, y, 'o', alpha=0)[0]
         points.append(point)
-        plt.plot([x[-1], span], [y[-1], 0], color='steelblue')
-        plt.legend()
-        plt.title(title)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
+
+        set_max_y = max(y, key=abs)
+        set_max_x = x[y.index(set_max_y)]
+        max_idxs = []
+        for i in range(len(y)):
+            if abs(y[i]) == abs(set_max_y):
+                max_idxs.append(i)
+
+        last_idx = max_idxs[-1]
+        set_max_x = x[last_idx]
+        set_max_y = y[last_idx]
+
+        if max_y is None or abs(set_max_y) > abs(max_y):
+            max_y = set_max_y
+            max_x = set_max_x
+
+    if max_x is not None and max_y is not None:
+        plt.text(max_x, max_y,
+                 f"({max_x:.0f}, {max_y:.4f})",
+                 fontsize=10, ha='left', va='bottom', color='red')
+    
+    plt.legend()
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
     if type == "bme":
         plt.gca().invert_yaxis()
@@ -91,16 +115,17 @@ def plot_env(data, type):
 
     plt.show()
 
-# def plot_flex_stress(BMD,I):
-
 if __name__ == "__main__":
     geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 73.73), 6.27, 1.27], "A3": [(83.73, 73.73), 6.27, 1.27], "A4": [(10, 1.27), 1.27, 72.46], "A5": [(88.73, 1.27), 1.27, 72.46], "A6": [(0, 75), 100, 1.27]}
     loads = [(67.5, 172), (67.5, 348), (67.5, 512), (67.5, 688), (91.0, 852), (91.0, 1028)]
     span = 1200
+    level = 1
+    
     # sfe_max, sfe_min, bme, flex_comp, flex_tens = init_plots(loads,span, geometry)
-    sfe, bme, comp_e, tens_e = init_plots(loads,span, geometry)
+    sfe, bme, comp_e, tens_e, glue_e = init_plots(loads,span, geometry, level)
 
     plot_env(sfe, "sfe")
     plot_env(bme, "bme")
-    plot_env(comp_e, "comp")
+    plot_env(comp_e, "comp_e")
     plot_env(tens_e, "tens_e")
+    plot_env(glue_e, "glue_e")
