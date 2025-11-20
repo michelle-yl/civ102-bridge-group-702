@@ -72,10 +72,15 @@ def reaction_forces(loads, span):
     A_y = total_load - B_y
     return [(A_y, loc_A_y), (B_y, loc_B_y)]
 
-def update_loads(loads, span):
-    for load in loads:
-        load[1] += 1
-    # assume loads move left to right, leftmost load begins at x = 0
+def update_loads(loads, direction):
+    if direction == "right":
+        for load in loads:
+            load[1] += 1
+    elif direction == "left":
+        for load in loads:
+            load[1] -= 1
+    return loads
+
 
 
 # Params:
@@ -99,7 +104,7 @@ def calculate_shear_force(loads, reaction_forces, span):
 
 
 # max shear stress at a location x
-# I = [[I1, geometry, (start, end)], ...]
+# I = [[I1, geometry, (start, end), layers], ...]
 def shear_stress_diagram(shear_force_diagram, I, b):
     Q_maxs = []
     for i in range(len(I)):
@@ -152,8 +157,8 @@ def calculate_BMD(SFD):
         bending_moment_diagram.append([x[0], M])
     return bending_moment_diagram
 
-# find max flexural stress
-# I = [[I, geometry, (start, end)], ...]
+# find flexural stress diagram
+# I = [[I, geometry, (start, end), layers], ...]
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 # assume geometry is organized from bottom to top of cross-section.  The last component, An, is the topmost component.
 def flexural_stress_diagram(BMD, I):
@@ -224,10 +229,12 @@ def plate_buckling_stress(geometry, case, layers, a = None):
 
 
 # shear glue stress
-def shear_glue_stress_diagram(shear_force_diagram, I, level, layers): # level is an integer indicating which glue line to analyze, counting from the top down
+# I = [[I, geometry, (start, end), layers], ...]
+def shear_glue_stress_diagram(shear_force_diagram, I, level): # level is an integer indicating which glue line to analyze, counting from the top down
     shear_glue_stresses_diagram = []
     for i in range(len(I)):
         geometry = I[i][1]
+        layers = I[i][3]
         if level == 1 and layers == 1:
             upper_component_dimensions = list(geometry.values())[-level]
             d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
@@ -237,9 +244,9 @@ def shear_glue_stress_diagram(shear_force_diagram, I, level, layers): # level is
         if level == 1 and layers == 2:
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
-            A = # finish this later
+            A = upper_component_dimensions[1] * upper_component_dimensions[2]
             d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
-            b = # finish this later
+            b = second_upper_component_dimensions[1]
 
         if level == 2 and layers == 2:
             upper_component_dimensions = list(geometry.values())[-level]
@@ -256,12 +263,21 @@ def shear_glue_stress_diagram(shear_force_diagram, I, level, layers): # level is
 
     return shear_glue_stresses_diagram
 
+
 # safety factor
 
 def safety_factor(applied_stress, type):
     # all stresses in MPa
     allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
     return allowable_stresses[type] / applied_stress
+
+def safety_factor_thin_plate():
+    case_1_failure = plate_buckling_stress(geometry, 1, layers)
+
+    case_2_failure = plate_buckling_stress(geometry, 2, layers)
+    case_3_failure = plate_buckling_stress(geometry, 3, layers)
+    case_4_failure = plate_buckling_stress(geometry, 4, layers, a = 400)
+
 
 def initialize_loads():
     return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
