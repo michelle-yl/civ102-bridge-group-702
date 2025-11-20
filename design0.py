@@ -1,3 +1,5 @@
+import copy
+import math
 
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 
@@ -138,7 +140,8 @@ def shear_stress_diagram(shear_force_diagram, I):
 
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 def calculate_Qmax(geometry):
-    geo_below_ybar = geometry.copy()
+    # ...
+    geo_below_ybar = copy.deepcopy(geometry)
     y_bar = calculate_centroidal_axis(geometry)
     for component in geo_below_ybar.values():
         if component[2] + component[0][1] > y_bar:
@@ -297,7 +300,7 @@ def initialize_loads():
     return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
 
 def simulation_safety_factors(loads, span, I):
-    min_safety_factors = {"flexural tension": 1000, "flexural compression": 1000, "shear": 1000, "cement shear": 1000, "case 1": 1000, "case 2": 1000, "case 3": 1000, "case 4": 1000} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
+    min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
     for x in range(span - loads[-1][1]):
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I)
@@ -346,6 +349,7 @@ def simulation_safety_factors(loads, span, I):
         loads = update_loads(loads, "right")
 
     for x in range(span - loads[-1][1]):
+
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
