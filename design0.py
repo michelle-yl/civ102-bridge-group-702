@@ -123,7 +123,7 @@ def calculate_Qmax(geometry):
     # ...
     geo_below_ybar = copy.deepcopy(geometry)
     y_bar = calculate_centroidal_axis(geometry)
-    for component in geo_below_ybar.values():
+    for component in copy.deepcopy(geo_below_ybar).values():
         if component[0][1] >= y_bar:
             geo_below_ybar.pop(list(geo_below_ybar.keys())[list(geo_below_ybar.values()).index(component)])
         if component[2] + component[0][1] > y_bar:
