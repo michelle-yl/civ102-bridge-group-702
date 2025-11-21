@@ -405,6 +405,15 @@ def shear_glue_stress_diagram(shear_force_diagram, I_list, type):
                 d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # distance from centroid of area above glue line to centroidal axis
                 A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2])
                 b = list(geometry.values())[-3][1]*2 # the third-to-top component is the glue tab component, so its width*2 is the glue line length
+            
+            if layers == 3:
+                level = 3
+                upper_component_dimensions = list(geometry.values())[-level]
+                second_upper_component_dimensions = list(geometry.values())[-(level-1)]
+                third_upper_component_dimensions = list(geometry.values())[-(level-2)]
+                d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions, "third_upper": third_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # distance from centroid of area above glue line to centroidal axis
+                A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2]) + (third_upper_component_dimensions[1] * third_upper_component_dimensions[2])
+                b = list(geometry.values())[-4][1]*2 # the fourth-to-top component is the glue tab component, so its width*2 is the glue line length
         
         if type == "sheets":
 
@@ -449,13 +458,14 @@ def safety_factor_thin_plate(I_n, flexural_compression_diagram, shear_stress_dia
     #   I_n = [I_value, geometry, (start, end), layers]
     # flexural_compression_diagram = [[x1, sigma_c1], [x2, sigma_c2], ...] --> used for cases 1-3
     # shear_stress_diagram = [[x1, tau1], [x2, tau2], ...] --> used for case 4
-    # Returns the 4 safety factors for the 4 plate buckling cases
+    # Returns the 4 safety factors for the 4 plate buckling cases for a given cross-section
 
     geometry = I_n[1]
     layers = I_n[3]
+    start, end = I_n[2][0], I_n[2][1]
 
     case_1_failure = plate_buckling_stress(geometry, 1, layers)
-    max_flex_comp = max(flexural_compression_diagram, key = lambda x: abs(x[1]))[1] # use max
+    max_flex_comp = max(flexural_compression_diagram[start:end], key = lambda x: abs(x[1]))[1] # use max flexural compression
     FOS1 = case_1_failure / abs(max_flex_comp)
 
     case_2_failure = plate_buckling_stress(geometry, 2, layers)
@@ -472,13 +482,15 @@ def safety_factor_thin_plate(I_n, flexural_compression_diagram, shear_stress_dia
     FOS3 = case_3_failure / abs(max_flex_comp_case_3)
 
     case_4_failure = plate_buckling_stress(geometry, 4, layers, a)
-    max_shear = max(shear_stress_diagram, key = lambda x: abs(x[1]))[1]
+    max_shear = max(shear_stress_diagram[start:end], key = lambda x: abs(x[1]))[1]
     FOS4 = case_4_failure / abs(max_shear) 
 
     return FOS1, FOS2, FOS3, FOS4
 
+
 def initialize_loads():
-    return [[400/6, 0], [400/6, 176], [400/6, 340], [400/6, 516], [400/6, 680], [400/6, 856]]
+    freight = 500/(1.38+1.1+1)
+    return [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1,856]]
 
 def simulation_safety_factors(loads, span, I, b=2.54):
     min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
@@ -684,9 +696,16 @@ if __name__ == "__main__":
     #I = [[418480.7, geometry, (0, 1200), 1]]
     #min_safety_factors = simulation_safety_factors(loads, span, I)
     #print(min_safety_factors)
-    geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
-    I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
+    #geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
+    #I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
+    #min_safety_factors = simulation_safety_factors(kN, span, I)
+    #print(min_safety_factors)
+    #print(calculate_centroidal_axis(geometry2))
+    #print(second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)))
+    geometry3 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
+    I = [[second_moment_of_area(geometry3, calculate_centroidal_axis(geometry3)), geometry3, (0, 1260), 3]]
     min_safety_factors = simulation_safety_factors(kN, span, I)
     print(min_safety_factors)
-    print(calculate_centroidal_axis(geometry2))
-    print(second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)))
+    print(calculate_centroidal_axis(geometry3))
+    print(second_moment_of_area(geometry3, calculate_centroidal_axis(geometry3)))
+    
