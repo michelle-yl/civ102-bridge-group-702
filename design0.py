@@ -421,7 +421,7 @@ def shear_glue_stress_diagram(shear_force_diagram, I_list, type):
         Q = A * d
 
         for x in range(I[i][2][0], I[i][2][1] + 1):
-            shear_glue_stress = shear_force_diagram[x][1] * Q / (I[i][0] * b)
+            shear_glue_stress = shear_force_diagram[x][1] * Q / (I[i][0] * b)  # (MPa)
             shear_glue_stresses_diagram.append([x, shear_glue_stress])
 
     return shear_glue_stresses_diagram  # shear_glue_stresses_diagram = [[x1, sigma_glue1], [x2, sigma_glue2], ...]
@@ -429,19 +429,33 @@ def shear_glue_stress_diagram(shear_force_diagram, I_list, type):
 
 ''' Safety factors '''
 
+# safety factors for tension, compression, shear, and glue shear
 def safety_factor(applied_stress, type):
-    # all stresses in MPa
-    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 2} 
-    return allowable_stresses[type] / applied_stress
 
-# I = [[I_value, geometry, (start, end), layers], ...]
-# In = [I_value, geometry, (start, end), layers]
-def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diagram, a = None):
-    geometry = In[1]
-    layers = In[3]
+    # Parameters:
+    # applied_stress = applied stress of interest (MPa)
+    # type = string indicating what type of stress ("tensile", "compressive", "shear", "cement_shear")
+    # returns safety factor
+
+    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 2} 
+    return allowable_stresses[type] / applied_stress # FOS = capacity / demand
+
+
+# safety factors for thin plate buckling
+def safety_factor_thin_plate(I_n, flexural_compression_diagram, shear_stress_diagram, a = None):
+
+    # Parameters:
+    # I_n: One cross-section from I_list
+    #   I_n = [I_value, geometry, (start, end), layers]
+    # flexural_compression_diagram = [[x1, sigma_c1], [x2, sigma_c2], ...] --> used for cases 1-3
+    # shear_stress_diagram = [[x1, tau1], [x2, tau2], ...] --> used for case 4
+    # Returns the 4 safety factors for the 4 plate buckling cases
+
+    geometry = I_n[1]
+    layers = I_n[3]
 
     case_1_failure = plate_buckling_stress(geometry, 1, layers)
-    max_flex_comp = max(flexural_compression_diagram, key = lambda x: abs(x[1]))[1]
+    max_flex_comp = max(flexural_compression_diagram, key = lambda x: abs(x[1]))[1] # use max
     FOS1 = case_1_failure / abs(max_flex_comp)
 
     case_2_failure = plate_buckling_stress(geometry, 2, layers)
@@ -604,11 +618,11 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
         FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
-        FOS_flex_tens_diagram.append([x, FOS_shear])
+        FOS_flex_tens_diagram.append([x, FOS_flex_tens])
         
         max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
         FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
-        FOS_flex_comp_diagram.append([x, FOS_shear])
+        FOS_flex_comp_diagram.append([x, FOS_flex_comp])
 
         # cement shear stress
         reaction_forces_list = reaction_forces(loads, span)
@@ -660,6 +674,8 @@ if __name__ == "__main__":
     #print(f"Second Moment of Area (I): {I:.4f} mm^4")
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
+    freight = 500/(1.38+1.1+1)
+    kN = [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1,856]]
     #loads = [(50, 25), (100, 1275)]
     span = 1260
     b = 2.54
@@ -667,7 +683,9 @@ if __name__ == "__main__":
     #I = [[418480.7, geometry, (0, 1200), 1]]
     #min_safety_factors = simulation_safety_factors(loads, span, I)
     #print(min_safety_factors)
-    geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
+    geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
     I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
-    min_safety_factors = simulation_safety_factors(loads, span, I)
+    min_safety_factors = simulation_safety_factors(kN, span, I)
     print(min_safety_factors)
+    print(calculate_centroidal_axis(geometry2))
+    print(second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)))
