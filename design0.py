@@ -397,7 +397,7 @@ def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diag
     return FOS1, FOS2, FOS3, FOS4
 
 def initialize_loads():
-    return [(67.5, 0), (67.5, 176), (67.5, 340), (67.5, 516), (91.0, 680), (91.0, 856)]
+    return [(400/6, 0), (400/6, 176), (400/6, 340), (400/6, 516), (400/6, 680), (400/6, 856)]
 
 def simulation_safety_factors(loads, span, I):
     min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
@@ -522,7 +522,7 @@ def simulation_safety_factors_across_bridge(loads, span, I):
     FOS_case_3_diagram = []
     FOS_case_4_diagram = []
     
-    for x in range(span - loads[-1][1]):
+    for x in range(span - loads[-1][1] - loads[0][1]):
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
