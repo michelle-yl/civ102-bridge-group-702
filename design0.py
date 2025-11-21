@@ -501,6 +501,7 @@ def simulation_safety_factors(loads, span, I, b=2.54):
         if abs(FOS_flex_tens) < min_safety_factors["flexural tension"]:
             min_safety_factors["flexural tension"] = abs(FOS_flex_tens)
         max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
+        print(max_flex_comp)
         FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
 
         if FOS_flex_comp < min_safety_factors["flexural compression"]:
