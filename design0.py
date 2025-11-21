@@ -204,14 +204,37 @@ def calculate_shear_force(loads, reaction_forces, span):
         for load in loads:  # check if there is a load at that x-value
             if load[1] == x:
                 V -= load[0]  # subtract load, since loads point downwards
-        shear_force_diagram.append([x, V])  # add V and its location to the diagram
+        shear_force_diagram.append([x, V])  # add V (N) and its location (mm) to the diagram
     
     return shear_force_diagram  # shear_force_diagram = [[x1, V1], [x2, V2], ...] --> return a list of lists of shear force at each mm along the bridge
 
 ''' Finding shear stress diagram '''
 
-# max shear stress at a location x
-# I_list = [[I1, geometry, (start, end)], ...]
+# Find maximum Q for a given geometry using the area between y_bar and the bottom shear stress-free surface
+def calculate_Qmax(geometry):
+
+    # Parameters
+    # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
+    # Returns maximum Q for the cross-section (mm^3)
+
+    geo_below_ybar = copy.deepcopy(geometry)  # initialize geometry below y_bar
+    y_bar = calculate_centroidal_axis(geometry)
+
+    for component in copy.deepcopy(geo_below_ybar).values():
+        if component[0][1] >= y_bar:
+            geo_below_ybar.pop(list(geo_below_ybar.keys())[list(geo_below_ybar.values()).index(component)])  # remove components above y_bar
+        if component[2] + component[0][1] > y_bar:
+            component[2] = y_bar - component[0][1]  # cut the heights of the webs to y-bar
+    
+    Q = 0  # initialize Q
+
+    for component in geo_below_ybar.values():
+        area = component[1] * component[2]
+        d = (component[0][1] + component[2]/2) - y_bar  # distance between y-bar and centroid of area below y-bar
+        Q += area * d
+    
+    return Q # (mm^3)
+
 # Finds maximum shear stress along span of bridge, accounting for changing I values for different sections.
 def shear_stress_diagram(shear_force_diagram, I_list, b):
 
@@ -227,6 +250,7 @@ def shear_stress_diagram(shear_force_diagram, I_list, b):
     #           geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
     #       (start, end) = position along span where cross-section begins and position where it ends (mm)
     # b: width of the beam's cross section at the centroidal axis (mm)
+    # Returns a list of lists of location-tau pairs
 
     Q_maxs = []  # initialize list of Q_maxs for each cross-section
 
@@ -241,72 +265,78 @@ def shear_stress_diagram(shear_force_diagram, I_list, b):
         for x in range(I_list[i][2][0], I_list[i][2][1]):  # for every x in the range of that cross-section's segment
             shear_stress = SFD[x][1] * Q_maxs[i] / (I_list[i][0] * b)  # calculate shear stress
             shear_stresses_diagram.append([x, shear_stress])  # add location and corresponding shear stress to shear_stresses_diagram
-    return shear_stresses_diagram
+    return shear_stresses_diagram  # shear_stresses_diagram = [[x1, tau1], [x2, tau2], ...]
 
-# geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
-def calculate_Qmax(geometry):
-    # ...
-    geo_below_ybar = copy.deepcopy(geometry)
-    y_bar = calculate_centroidal_axis(geometry)
-    for component in copy.deepcopy(geo_below_ybar).values():
-        if component[0][1] >= y_bar:
-            geo_below_ybar.pop(list(geo_below_ybar.keys())[list(geo_below_ybar.values()).index(component)])
-        if component[2] + component[0][1] > y_bar:
-            component[2] = y_bar - component[0][1]
-    Q = 0
-    for component in geo_below_ybar.values():
-        area = component[1] * component[2]
-        d = (component[0][1] + component[2]/2) - y_bar
-        Q += area * d
-    return Q
         
+''' Finding bending moment diagram '''
 
-# find BMD
+# Find bending moment diagram
 def calculate_BMD(SFD):
-    bending_moment_diagram = []
+    
+    # Parameters:
+    # SFD: shear force diagram = [[x1, V1], [x2, V2], ...]
+    # Returns bending moment diagram = [[x1, M1], [x2, M2], ...]
+
+    bending_moment_diagram = []  # initialize BMD
     M = 0
     for x in SFD:
-        M += x[1]
+        M += x[1]  # moment = area under SFD (Nmm).  When incrementing by 1 mm, area = V * 1 --> x[1] = V --> delta M = x[1] * 1
         bending_moment_diagram.append([x[0], M])
-    return bending_moment_diagram
 
-# find flexural stress diagram
-# I = [[I, geometry, (start, end), layers], ...]
-# geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
-# assume geometry is organized from bottom to top of cross-section.  The last component, An, is the topmost component.
-def flexural_stress_diagram(BMD, I):
+    return bending_moment_diagram  # bending_moment_diagram = [[x1, M1], [x2, M2], ...]
+
+
+''' Find flexural stress diagram '''
+
+# find flexural stress diagram --- flexural stress for every point along span of beam
+def flexural_stress_diagram(BMD, I_list):
+
+    # Parameters:
+    # BMD: bending moment diagram
+    #   BMD = [[x1, M1], [x2, M2], ...]
+    # I_list: list of cross-sections
+    #   I_list = [[I, geometry, (start, end), layers], ...]
+    #       geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
+    #       Assume geometry is organized from bottom to top of cross-section.  The last component, An, is the topmost component.
+    # Returns 2 lists: One of location-flexural compression pairs and one of location-flexural tension pairs
 
     flexural_compression_diagram = []
     flexural_tension_diagram = []
     
-    for i in range(len(I)):
-        geometry = I[i][1]
+    for i in range(len(I_list)):  # run through each cross-section
+
         upper_component_dimensions = list(geometry.values())[-1]
         height = upper_component_dimensions[0][1] + upper_component_dimensions[2]
         y_bar = calculate_centroidal_axis(geometry)
-        y_compression = y_bar - height
-        y_tension = y_bar
+        y_compression = y_bar - height  # distance from y_bar to top of cross-section
+        y_tension = y_bar  # distance from y_bar to bottom of cross-section
         
-        for x in range(I[i][2][0], I[i][2][1]+1):
+        for x in range(I[i][2][0], I[i][2][1]+1):  # run through the range of that segment
             
-            sigma_compression = BMD[x][1] * y_compression / I[i][0]
-            sigma_tension = BMD[x][1] * y_tension / I[i][0]
+            sigma_compression = BMD[x][1] * y_compression / I_list[i][0]  # sigma = MY/I (MPa)
+            sigma_tension = BMD[x][1] * y_tension / I_list[i][0]
 
             flexural_compression_diagram.append([x, sigma_compression])
             flexural_tension_diagram.append([x, sigma_tension])
 
-    return flexural_compression_diagram, flexural_tension_diagram
+    return flexural_compression_diagram, flexural_tension_diagram  # flexural_compression_diagram = [[x1, sigma_c1], [x2, sigma_c2], ...] and flexural_tension_diagram [[x1, sigma_t1], [x2, sigma_t2], ...]
 
-    # for x in BMD:
 
-# calculate plate buckling stress
+''' Find plate buckling stresses '''
+
+# calculate plate buckling stress for a given case (1, 2, 3, or 4)
 
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 def plate_buckling_stress(geometry, case, layers, a = None):
-    if layers == 2:
-        t = list(geometry.values())[-1][2] + list(geometry.values())[-2][2] # thickness of flange or web
-    else:
-        t = list(geometry.values())[-1][2]
+
+    # Parameters:
+    # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
+    # case: 1, 2, 3, or 4
+    # layers: the number of matboard layers making the top flange (1, 2, 3, ...)
+    # a = spacing between diaphragms (mm)
+    # Returns the failure plate buckling stress for a given case (MPa)
+
+    t = 1.27 * layers # thickness of flange
 
     # case 1: buckling of compressive flange between webs
     if case == 1:
@@ -325,7 +355,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
     # case 3: buckling of the webs due to the flexural stresses
     if case == 3:
         t = 1.27 # thickness of web
-        h = list(geometry.values())[-(layers+3)][0][1] + list(geometry.values())[-(layers+3)][2] - calculate_centroidal_axis(geometry) # height of web
+        h = list(geometry.values())[-(layers+3)][0][1] + list(geometry.values())[-(layers+3)][2] - calculate_centroidal_axis(geometry) # height of web above centroidal axis
         k = 6
         sigma = k * (3.14159**2) * 4000 * (t / h)**2 / (12 * (1 - 0.2**2))
         return sigma
@@ -340,37 +370,52 @@ def plate_buckling_stress(geometry, case, layers, a = None):
 
 
 
+''' Find glue shear stress '''
 
-# shear glue stress
-# I = [[I, geometry, (start, end), layers], ...]
-def shear_glue_stress_diagram(shear_force_diagram, I, type): # type is a string (either "glue tabs" or "sheets")
+# glue shear stress diagram
+def shear_glue_stress_diagram(shear_force_diagram, I_list, type):
+    
+    # Parameters:
+    # shear_force_diagram = [[x1, V1], [x2, V2], ...]
+    # I_list = [[I, geometry, (start, end), layers], ...]
+    #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
+    # type: A string indicating the type of glue shear stress, either "glue tabs" (shear stress at junction between webs and flange) or "sheets" (shear stress between layered sheets)
+    # Returns shear_glue_stresses_diagram = [[x1, sigma_glue1], [x2, sigma_glue2], ...]
+
     shear_glue_stresses_diagram = []
+
     for i in range(len(I)):
-        geometry = I[i][1]
-        layers = I[i][3]
+
+        geometry = I_list[i][1]
+        layers = I_list[i][3]
+
         if type == "glue tabs":
+
             if layers == 1:
                 level = 1
                 upper_component_dimensions = list(geometry.values())[-level]
-                d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
+                d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # distance from centroid of area above glue line to centroidal axis
                 A = upper_component_dimensions[1] * upper_component_dimensions[2]
-                b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the total glue line length
+                b = list(geometry.values())[-2][1]*2 # the second-to-top component is the glue tab component, so its width*2 is the total glue line length
+            
             if layers == 2:
                 level = 2
                 upper_component_dimensions = list(geometry.values())[-level]
                 second_upper_component_dimensions = list(geometry.values())[-(level-1)]
-                d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
+                d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # distance from centroid of area above glue line to centroidal axis
                 A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2])
-                b = list(geometry.values())[-3][1]*2 # assume the third-to-top component is the web with glue tab, so its width*2 is the glue line length
+                b = list(geometry.values())[-3][1]*2 # the third-to-top component is the glue tab component, so its width*2 is the glue line length
         
         if type == "sheets":
-            if layers == 1:
+
+            if layers == 1: # if there's only one layer in the cross-section, there's no "sheet" type glue stress in that segment of the beam
                 continue
+            
             level = 2
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
             A = upper_component_dimensions[1] * upper_component_dimensions[2]
-            d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to top shear-stress free surface
+            d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # distance from centroid of area above glue line to top shear-stress free surface
             b = second_upper_component_dimensions[1]
         
         Q = A * d
@@ -379,14 +424,14 @@ def shear_glue_stress_diagram(shear_force_diagram, I, type): # type is a string 
             shear_glue_stress = shear_force_diagram[x][1] * Q / (I[i][0] * b)
             shear_glue_stresses_diagram.append([x, shear_glue_stress])
 
-    return shear_glue_stresses_diagram
+    return shear_glue_stresses_diagram  # shear_glue_stresses_diagram = [[x1, sigma_glue1], [x2, sigma_glue2], ...]
 
 
-# safety factor
+''' Safety factors '''
 
 def safety_factor(applied_stress, type):
     # all stresses in MPa
-    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 1.5} #cement_shear is actually 2, but that's only if properly cured
+    allowable_stresses = {"tensile": 30, "compressive": 6, "shear": 4, "cement_shear": 2} 
     return allowable_stresses[type] / applied_stress
 
 # I = [[I_value, geometry, (start, end), layers], ...]
@@ -414,7 +459,7 @@ def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diag
 
     case_4_failure = plate_buckling_stress(geometry, 4, layers, a)
     max_shear = max(shear_stress_diagram, key = lambda x: abs(x[1]))[1]
-    FOS4 = case_4_failure / abs(max_shear) # ***double check the theory behind these calculations***
+    FOS4 = case_4_failure / abs(max_shear) 
 
     return FOS1, FOS2, FOS3, FOS4
 
@@ -616,7 +661,7 @@ if __name__ == "__main__":
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
     #loads = [(50, 25), (100, 1275)]
-    span = 1200
+    span = 1260
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
     #I = [[418480.7, geometry, (0, 1200), 1]]
@@ -625,4 +670,4 @@ if __name__ == "__main__":
     geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
     I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
-    # print(min_safety_factors)
+    print(min_safety_factors)
