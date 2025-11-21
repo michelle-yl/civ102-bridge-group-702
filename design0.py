@@ -594,7 +594,7 @@ if __name__ == "__main__":
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
     #loads = [(50, 25), (100, 1275)]
-    span = 1260
+    span = 1200
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
     #I = [[418480.7, geometry, (0, 1200), 1]]
@@ -603,6 +603,4 @@ if __name__ == "__main__":
     geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
     I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
-    print(min_safety_factors["shear"])
-    print("iteration 1")
-    print(min_safety_factors)
+    # print(min_safety_factors)
