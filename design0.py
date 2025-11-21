@@ -68,8 +68,8 @@ def calculate_centroidal_axis(geometry):
 
     for i in range(len(centroids)): # for each component's centroid, add area * centroid to y_bar
         y_bar += areas_list[i] * centroids[i]
-    y_bar /= total_area # divide by total area to get centroidal axis
-    return y_bar # return centroidal axis of cross-section
+    y_bar /= total_area  # divide by total area to get centroidal axis
+    return y_bar  # return centroidal axis of cross-section
 
 ''' Calulating second moment of area (I) '''
 
@@ -84,8 +84,8 @@ def second_moment_area_component(component):
     #       height = height of component (mm)
     # Returns the second moment of area of the component about its own centroidal axis
     
-    I = component[1] * component[2]**3 / 12 # component[1] = width, component[2] = height
-    return I # return I of component
+    I = component[1] * component[2]**3 / 12  # component[1] = width, component[2] = height
+    return I  # return I of component
 
 # Calculating second moment of area of the entire cross-section about the centroidal axis
 def second_moment_of_area(geometry, y_bar):
@@ -113,7 +113,7 @@ def second_moment_of_area(geometry, y_bar):
     
     return I_total  # return I of entire cross-section
 
-'''Reaction forces '''
+''' Reaction forces '''
 
 # loads = [[load1, position1], [load2, position2], ...]
 # Calculate reaction forces at supports A and B
@@ -160,16 +160,23 @@ def reaction_forces(loads, span):
 
 ''' Updating location of loads to simulate train movement '''
 
-# increment the position of the loads by 1 mm
-
+# Increment the position of the loads by 1 mm
 def update_loads(loads, direction):
+    
+    # Parameters:
+    # loads: list of loads (N) and their positions along the span of the bridge (mm)
+    #   loads = [[load1, position1], [load2, position2], ...]
+    # direction: string type, either "left" or "right", indicates which direction the train is moving
+    # Returns the list of loads with each load's location incremented 1 mm left or right.
+    #   loads = [[load1, new position1], [load2, new position2], ...]
+
     if direction == "right":
         for load in loads:
-            load[1] += 1
+            load[1] += 1  # shift each train wheel right 1 mm
     elif direction == "left":
         for load in loads:
-            load[1] -= 1
-    return loads
+            load[1] -= 1  # shift each train wheel left 1 mm
+    return loads  # returns the list of loads with incremented locations
 
 
 
@@ -178,7 +185,16 @@ def update_loads(loads, direction):
 # (list) reaction_forces: list of tuples (magnitude of force, location)
 # (int)  span: length of bridge
 
+''' Finding SFD '''
+
+# Finds SFD along the bridge for a given load distribution
 def calculate_shear_force(loads, reaction_forces, span):
+
+    # Parameters:
+    # loads: list of loads (N) and their positions along the span of the bridge (mm)
+    #   loads = [[load1, position1], [load2, position2], ...]
+    # 
+
     shear_force_diagram = []
     V = 0
     for x in range(span+1):
@@ -327,6 +343,8 @@ def shear_glue_stress_diagram(shear_force_diagram, I, type): # type is a string 
                 b = list(geometry.values())[-3][1]*2 # assume the third-to-top component is the web with glue tab, so its width*2 is the glue line length
         
         if type == "sheets":
+            if layers == 1:
+                continue
             layers == 2
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
@@ -413,11 +431,18 @@ def simulation_safety_factors(loads, span, I):
 
         # cement shear stress
         reaction_forces_list = reaction_forces(loads, span)
-        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, 1)
+        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "glue tabs")
         max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
         FOS_cement_shear = safety_factor(max_cement_shear, "cement_shear")
         if abs(FOS_cement_shear) < min_safety_factors["cement shear"]:
             min_safety_factors["cement shear"] = abs(FOS_cement_shear)
+
+        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "sheets")
+        if shear_glue_stress_profile != []:
+            max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
+            FOS_cement_shear = safety_factor(max_cement_shear, "cement_shear")
+            if abs(FOS_cement_shear) < min_safety_factors["cement shear"]:
+                min_safety_factors["cement shear"] = abs(FOS_cement_shear)
         
         # plate buckling
         for i in range(len(I)):
