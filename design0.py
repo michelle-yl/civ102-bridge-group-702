@@ -124,8 +124,10 @@ def calculate_Qmax(geometry):
     geo_below_ybar = copy.deepcopy(geometry)
     y_bar = calculate_centroidal_axis(geometry)
     for component in geo_below_ybar.values():
+        if component[0][1] >= y_bar:
+            geo_below_ybar.pop(list(geo_below_ybar.keys())[list(geo_below_ybar.values()).index(component)])
         if component[2] + component[0][1] > y_bar:
-            component[2] = y_bar
+            component[2] = y_bar - component[0][1]
     y_bar_below = calculate_centroidal_axis(geo_below_ybar)
     area_below = sum(areas(geo_below_ybar).values())
     return area_below * (y_bar - y_bar_below)
@@ -221,21 +223,21 @@ def shear_glue_stress_diagram(shear_force_diagram, I, level): # level is an inte
         layers = I[i][3]
         if level == 1 and layers == 1:
             upper_component_dimensions = list(geometry.values())[-level]
-            d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
-            A = upper_component_dimensions[1] * upper_component_dimensions[2] * d
+            d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
+            A = upper_component_dimensions[1] * upper_component_dimensions[2]
             b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the glue line length
         
         if level == 1 and layers == 2:
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
             A = upper_component_dimensions[1] * upper_component_dimensions[2]
-            d = upper_component_dimensions[2]/2 # d from centroid of area above glue line to top shear-stress free surface
+            d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to top shear-stress free surface
             b = second_upper_component_dimensions[1]
 
         if level == 2 and layers == 2:
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
-            d = upper_component_dimensions[0][1] + upper_component_dimensions[2] - calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) # d from centroid of area above glue line to top shear-stress free surface
+            d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
             A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2])
             b = list(geometry.values())[-3][1]*2 # assume the third-to-top component is the web with glue tab, so its width*2 is the glue line length
         
