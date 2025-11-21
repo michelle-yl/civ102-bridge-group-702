@@ -292,7 +292,7 @@ def simulation_safety_factors(loads, span, I):
         
         # flexural stress and flexural tension
 
-        BMD = calculate_BMD(shear_stress_profile)
+        BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
         FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
@@ -340,7 +340,7 @@ def simulation_safety_factors(loads, span, I):
         
         # flexural stress and flexural tension
 
-        BMD = calculate_BMD(shear_stress_profile)
+        BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
         FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
@@ -407,5 +407,5 @@ if __name__ == "__main__":
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
     I = [[13690000, geometry, (0, 1300), 1]]
-    min_safety_factors = simulation_safety_factors(loads, span, I, b)
+    min_safety_factors = simulation_safety_factors(loads, span, I)
     print(min_safety_factors)
