@@ -313,7 +313,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
         t = 1.27 # thickness of web
         h = list(geometry.values())[-(layers+3)][2] # height of web
         k = 5
-        tau = k * (3.14159**2) * 4000 * ((t / h)**2 + (t / a)**2) / (12 * (1 - 0.2**2))
+        tau = (k * (3.14159**2) * 4000 * ((t / h)**2 + (t / a)**2)) / (12 * (1 - 0.2**2))
         return tau
 
 
@@ -524,7 +524,7 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
     
     loads = initialize_loads()
 
-    for x in range(span - loads[-1][1]):
+    for x in range(span - loads[-1][1]+1):
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
@@ -566,7 +566,7 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
             FOS_case_4_diagram.append([x, FOS4])
         
         loads = update_loads(loads, "right")
-
+        # print(FOS_shear_diagram)
     return FOS_shear_diagram, FOS_flex_tens_diagram, FOS_flex_comp_diagram, FOS_cement_shear_diagram_glue_tabs, FOS_cement_shear_diagram_sheets, FOS_case_1_diagram, FOS_case_2_diagram, FOS_case_3_diagram, FOS_case_4_diagram
 
 
