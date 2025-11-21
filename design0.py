@@ -189,6 +189,8 @@ def calculate_shear_force(loads, reaction_forces, span):
     #   loads = [[load1, position1], [load2, position2], ...]
     # reaction_forces: list of tuples (magnitude of force (N), location (mm)) describing reaction force at each support
     # span: length of bridge (mm)
+    # Returns a list of lists of location-shear force pairs
+    #   shear_force_diagram = [[x1, V1], [x2, V2], ...]
 
     shear_force_diagram = []  # initialize SFD
     V = 0  # initialize shear force
@@ -204,21 +206,41 @@ def calculate_shear_force(loads, reaction_forces, span):
                 V -= load[0]  # subtract load, since loads point downwards
         shear_force_diagram.append([x, V])  # add V and its location to the diagram
     
-    return shear_force_diagram  # 
+    return shear_force_diagram  # shear_force_diagram = [[x1, V1], [x2, V2], ...] --> return a list of lists of shear force at each mm along the bridge
+
+''' Finding shear stress diagram '''
 
 # max shear stress at a location x
-# I = [[I1, geometry, (start, end)], ...]
+# I_list = [[I1, geometry, (start, end)], ...]
+# Finds maximum shear stress along span of bridge, accounting for changing I values for different sections.
 def shear_stress_diagram(shear_force_diagram, I_list, b):
-    Q_maxs = []
-    for i in range(len(I_list)):
+
+    # Parameters:
+    # shear_force_diagram: list of shear forces at each location along the span
+    #   shear_force_diagram = [[x1, V1], [x2, V2], ...]
+    #       x = location along span (mm)
+    #       V = shear force at that location
+    # I_list: list of lists of cross-sectional features (cross-sections change for different sections of the span)
+    #   I_list = [[I1, geometry1, (start, end)], [I2, geometry2, (start, end)]...]
+    #       I = second moment of area of cross-section (mm^4)
+    #       geometry = geometry of cross-section (dictionary)
+    #           geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
+    #       (start, end) = position along span where cross-section begins and position where it ends (mm)
+    # b: width of the beam's cross section at the centroidal axis (mm)
+
+    Q_maxs = []  # initialize list of Q_maxs for each cross-section
+
+    for i in range(len(I_list)):  # for each cross-section, calculate Q_max and add it to the list Q_maxs
         Q = calculate_Qmax(I_list[i][1])
         Q_maxs.append(Q)
-    shear_stresses_diagram = []
-    SFD = shear_force_diagram[:]
-    for i in range(len(I_list)):
-        for x in range(I_list[i][2][0], I_list[i][2][1]):
-            shear_stress = SFD[x][1] * Q_maxs[i] / (I_list[i][0] * b)
-            shear_stresses_diagram.append([x, shear_stress])
+    
+    shear_stresses_diagram = []  # initialize shear_stresses_diagram
+    SFD = shear_force_diagram[:]  # make a copy of shear_force_diagram to avoid accidentally altering values
+
+    for i in range(len(I_list)):  # run through each cross-section segment
+        for x in range(I_list[i][2][0], I_list[i][2][1]):  # for every x in the range of that cross-section's segment
+            shear_stress = SFD[x][1] * Q_maxs[i] / (I_list[i][0] * b)  # calculate shear stress
+            shear_stresses_diagram.append([x, shear_stress])  # add location and corresponding shear stress to shear_stresses_diagram
     return shear_stresses_diagram
 
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
