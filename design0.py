@@ -179,12 +179,6 @@ def update_loads(loads, direction):
     return loads  # returns the list of loads with incremented locations
 
 
-
-# Params:
-# (list) loads: list of lists [magnitude of load, location]
-# (list) reaction_forces: list of tuples (magnitude of force, location)
-# (int)  span: length of bridge
-
 ''' Finding SFD '''
 
 # Finds SFD along the bridge for a given load distribution
@@ -193,19 +187,24 @@ def calculate_shear_force(loads, reaction_forces, span):
     # Parameters:
     # loads: list of loads (N) and their positions along the span of the bridge (mm)
     #   loads = [[load1, position1], [load2, position2], ...]
-    # 
+    # reaction_forces: list of tuples (magnitude of force (N), location (mm)) describing reaction force at each support
+    # span: length of bridge (mm)
 
-    shear_force_diagram = []
-    V = 0
-    for x in range(span+1):
-        for force in reaction_forces:
+    shear_force_diagram = []  # initialize SFD
+    V = 0  # initialize shear force
+
+    # sign convention for V: upwards is positive, downwards is negative.
+
+    for x in range(span + 1):  # run through every mm increment along the bridge and check if there is a force there.  If so, update V.
+        for force in reaction_forces:  # check if there is a reaction force at that x-value
             if force[1] == x and x != 1200:
-                V += force[0]
-        for load in loads:
+                V += force[0]  # add reaction force, since reaction forces point upwards
+        for load in loads:  # check if there is a load at that x-value
             if load[1] == x:
-                V -= load[0]
-        shear_force_diagram.append([x, V])
-    return shear_force_diagram
+                V -= load[0]  # subtract load, since loads point downwards
+        shear_force_diagram.append([x, V])  # add V and its location to the diagram
+    
+    return shear_force_diagram  # 
 
 # max shear stress at a location x
 # I = [[I1, geometry, (start, end)], ...]
@@ -485,11 +484,18 @@ def simulation_safety_factors(loads, span, I):
 
         # cement shear stress
         reaction_forces_list = reaction_forces(loads, span)
-        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, 1)
+        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "glue tabs")
         max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
         FOS_cement_shear = safety_factor(max_cement_shear, "cement_shear")
         if abs(FOS_cement_shear) < min_safety_factors["cement shear"]:
             min_safety_factors["cement shear"] = abs(FOS_cement_shear)
+
+        shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "sheets")
+        if shear_glue_stress_profile != []:
+            max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
+            FOS_cement_shear = safety_factor(max_cement_shear, "cement_shear")
+            if abs(FOS_cement_shear) < min_safety_factors["cement shear"]:
+                min_safety_factors["cement shear"] = abs(FOS_cement_shear)
         
         # plate buckling
         for i in range(len(I)):
@@ -546,9 +552,10 @@ def simulation_safety_factors_across_bridge(loads, span, I):
         FOS_cement_shear_diagram_glue_tabs.append([x, FOS_cement_shear_glue_tabs])
 
         shear_glue_stress_profile_sheets = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "sheets")
-        max_cement_shear_sheets = max(shear_glue_stress_profile_sheets, key = lambda x: abs(x[1]))[1]
-        FOS_cement_shear_sheets = safety_factor(max_cement_shear_sheets, "cement_shear")
-        FOS_cement_shear_diagram_sheets.append([x, FOS_cement_shear_sheets])
+        if shear_glue_stress_profile_sheets != []:
+            max_cement_shear_sheets = max(shear_glue_stress_profile_sheets, key = lambda x: abs(x[1]))[1]
+            FOS_cement_shear_sheets = safety_factor(max_cement_shear_sheets, "cement_shear")
+            FOS_cement_shear_diagram_sheets.append([x, FOS_cement_shear_sheets])
         
         
         # plate buckling
