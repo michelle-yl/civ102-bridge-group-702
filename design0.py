@@ -522,7 +522,9 @@ def simulation_safety_factors_across_bridge(loads, span, I):
     FOS_case_3_diagram = []
     FOS_case_4_diagram = []
     
-    for x in range(span - loads[-1][1] - loads[0][1]):
+    initialize_loads()
+
+    for x in range(span - loads[-1][1]):
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
