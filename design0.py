@@ -4,75 +4,163 @@ import math
 # geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ...}
 
 
-# calculating centroidal axis
+''' Calculating centroidal axis '''
+
+# Calculating area of each component
 def areas(geometry):
-    # print(geometry.items())
-    areas_dict = {}
+
+    # Parameters:
+    # Geometry: dictionary of components with their location and dimensions.  Must be inputted by user.
+    #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       Anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
+    #       width = width of component (mm)
+    #       height = height of component (mm)
+    # Returns a list of each component's area
+    #   areas_list = [area1, area2, ...]
+
+    areas_list = []  # defining empty list to store areas
     for key, value in geometry.items():
-        width = value[1]
-        height = value[2]
+        width = value[1]  # width of component
+        height = value[2]  # height of component
         area = width * height
-        areas_dict[key] = area
-    return areas_dict # areas = {A1: area1, A2: area2, ...}
+        areas_list.append(area)  # add area to list
+    return areas_list  # areas_list = [area1, area2, ...]
 
+# Finding centroids of each component
 def find_centroids(geometry):
-    centroids = []
+
+    # Parameters:
+    # Geometry: dictionary of components with their location and dimensions
+    #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       Anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
+    #       width = width of component (mm)
+    #       height = height of component (mm)
+    # Returns a list of each component's centroid y-coordinate. y = 0 occurs at the bottom of the cross-section.
+    #   centroids = [c_y1, c_y2, ..., c_yn]
+
+    centroids = [] # defining empty list to store centroids
     for value in geometry.values():
-        anchor = value[0]
-        height = value[2]
-        c_y = anchor[1] + height / 2
-        centroids.append((c_y))
-    return centroids
+        anchor = value[0]  # anchor = (x, y)
+        height = value[2]  # height of component
+        c_y = anchor[1] + height / 2 # centroid of rectangular component = height of component / 2 + y-coordinate of bottom of component
+        centroids.append((c_y))  # add centroid to list
+    return centroids  # centroids = [c_y1, c_y2, ..., c_yn]
 
+# Calculating centroidal axis of entire cross-section
 def calculate_centroidal_axis(geometry):
-    areas_dict = areas(geometry)
-    total_area = sum(areas_dict.values())
-    centroids = find_centroids(geometry)
-    list_areas = []
-    for area in areas_dict.values():
-        list_areas.append(area)
-    y_bar = 0
-    for i in range(len(centroids)):
-        y_bar += list_areas[i] * centroids[i]
-    y_bar /= total_area
-    return y_bar
 
-# calculating I
-def inertia(component):
-    return component[1] * component[2]**3 / 12
+    # Parameters:
+    # geometry: dictionary of components with their location and dimensions
+    #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       Anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
+    #       width = width of component (mm)
+    #       height = height of component (mm)
+    # Returns the y-coordinate of the centroidal axis of the entire cross-section. y = 0 occurs at the bottom of the cross-section.
 
+    areas_list = areas(geometry)  # calculate areas of each component
+    total_area = sum(areas_list)  # calculate total area of cross-section
+    centroids = find_centroids(geometry)  # calculate centroids of each component
+    
+    y_bar = 0  # initialize y_bar
 
+    for i in range(len(centroids)): # for each component's centroid, add area * centroid to y_bar
+        y_bar += areas_list[i] * centroids[i]
+    y_bar /= total_area # divide by total area to get centroidal axis
+    return y_bar # return centroidal axis of cross-section
+
+''' Calulating second moment of area (I) '''
+
+# Calculating I for one rectangular component about its own centroidal axis
+def second_moment_area_component(component):
+    
+    # Parameters:
+    # component: list of component dimensions
+    #   component = [anchor, width, height]
+    #       anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
+    #       width = width of component (mm)
+    #       height = height of component (mm)
+    # Returns the second moment of area of the component about its own centroidal axis
+    
+    I = component[1] * component[2]**3 / 12 # component[1] = width, component[2] = height
+    return I # return I of component
+
+# Calculating second moment of area of the entire cross-section about the centroidal axis
 def second_moment_of_area(geometry, y_bar):
-    I_total = 0
-    list_areas = areas(geometry)
-    components = list(geometry.values())
-    centroids = find_centroids(geometry)
-    for i in range(len(components)):
-        I = inertia(components[i])
-        d_sq = (centroids[i] - y_bar)**2
-        I_total += I + list(list_areas.values())[i] * d_sq
-    return I_total
 
-# reaction forces
+    # Parameters:
+    # geometry: dictionary of components with their location and dimensions
+    #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       Anchor = (x, y) --> coordinate of bottom-left corner of component.  y = 0 occurs at the bottom of the cross-section.
+    #       width = width of component
+    #       height = height of component
+    # y_bar: y-coordinate of centroidal axis of entire cross-section. y = 0 occurs at the bottom of the cross-section.
+    # Returns the second moment of area of the entire cross-section about the centroidal axis
+
+    I_total = 0  # initialize I_total
+
+    list_areas = areas(geometry)  # list of areas of each component
+    components = list(geometry.values())  # list of each component's location and dimensions
+    centroids = find_centroids(geometry)  # list of each component's centroid's y-coordinate
+    
+    for i in range(len(components)):  # for each component, calculate I using parallel axis theorem
+        I = second_moment_area_component(components[i])  # I of component about its own centroidal axis
+        d_sq = (centroids[i] - y_bar)**2  # square of distance from component's centroid to cross-section's centroidal axis
+        I_total += I + list_areas[i] * d_sq  # add I of component + area * d^2 to I_total (parallel axis theorem)
+    
+    return I_total  # return I of entire cross-section
+
+'''Reaction forces '''
 
 # loads = [[load1, position1], [load2, position2], ...]
-
+# Calculate reaction forces at supports A and B
 def reaction_forces(loads, span):
-    A_y = 0
-    B_y = 0
-    loc_A_y = span / 2 - 600
-    loc_B_y = span / 2 + 600
-    total_load = 0
-    for load in loads:
+
+    # Parameters:
+    # loads: list of lists of loads and their positions
+    #   loads = [[load1, position1], [load2, position2], ...,]
+    #       load = magnitude of nth load (N)
+    #       position = location of nth load along span (mm).  x = 0 is at left end of bridge span.
+    # span: length of bridge (mm)
+    # Returns a list of tuples of the reaction forces at support A and support B
+    #   reaction_forces = [(A_y, loc_A_y), (B_y, loc_B_y)]
+
+    A_y = 0  # initialize reaction force at A
+    B_y = 0  # initialize reaction force at B
+
+    loc_A_y = span / 2 - 600  # support A is located 600 mm left of center of span
+    loc_B_y = span / 2 + 600  # support B is located 600 mm right of center of span
+
+    total_load = 0  # initialize total load
+
+    for load in loads:  # find the total applied load by summing all loads
         total_load += load[0]
-    # find B_y taking moment about A
-    M_A = 0
+    
+    # find B_y first by taking moment about A
+    B_y = 0  # initialize reaction force at B
+
     for load in loads:
-            M_A -= load[0]*(loc_A_y - load[1])
-    # print(M_A)
-    B_y = M_A / 1200
-    A_y = total_load - B_y
-    return [(A_y, loc_A_y), (B_y, loc_B_y)]
+    # sign convention: counterclockwise moment is positive.
+    # sum(moments about A) = 0
+    # 0 = sum(moments due to loads to the left of A) - sum(moments due to loads to the right of A) + moment due to B_y
+    # B_y * 1200 = sum(moments due to loads to the right of A) - sum(moments due to loads to the left of A)
+    # All applied loads point downwards.  Signs of moments are flipped when B_y is isolated.
+            
+            B_y -= load[0]*(loc_A_y - load[1]) 
+            # if load is to the left of A, loc_A_y - load[1] is positive, so moments due to loads to the left of A are subtracted.
+            # if load is to the right of A, loc_A_y - load[1] is negative, so moments due to loads to the right of A are added.
+
+    B_y = B_y / 1200  # divide by distance from A to B (1200 mm) to isolate B_y (N)
+    A_y = total_load - B_y  # A_y + B_y = total applied load, so A_y = total_load - B_y (N)
+    return [(A_y, loc_A_y), (B_y, loc_B_y)]  # returns a list of tuples describing the magnitude (N) and location (mm) of the reaction forces along the span
+
+
+''' Updating location of loads to simulate train movement '''
+
+# increment the position of the loads by 1 mm
 
 def update_loads(loads, direction):
     if direction == "right":
@@ -200,7 +288,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
     # case 3: buckling of the webs due to the flexural stresses
     if case == 3:
         t = 1.27 # thickness of web
-        h = list(geometry.values())[-(layers+3)][0][1] + list(geometry.values())[-(layers+3)][2] + 1.27 - calculate_centroidal_axis(geometry) # height of web
+        h = list(geometry.values())[-(layers+3)][0][1] + list(geometry.values())[-(layers+3)][2] - calculate_centroidal_axis(geometry) # height of web
         k = 6
         sigma = k * (3.14159**2) * 4000 * (t / h)**2 / (12 * (1 - 0.2**2))
         return sigma
@@ -273,7 +361,14 @@ def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diag
     FOS2 = case_2_failure / abs(max_flex_comp)
 
     case_3_failure = plate_buckling_stress(geometry, 3, layers)
-    FOS3 = case_3_failure / abs(max_flex_comp)
+    list_component_geometry = list(geometry.values())
+    y_bar = calculate_centroidal_axis(geometry)
+    y_max = list_component_geometry[-1][0][1] + list_component_geometry[-1][2] - y_bar
+    y_top_of_web = list_component_geometry[-(layers+3)][0][1] + list_component_geometry[-(layers+3)][2] - y_bar
+
+    max_flex_comp_case_3 = max_flex_comp/y_max * y_top_of_web
+
+    FOS3 = case_3_failure / abs(max_flex_comp_case_3)
 
     case_4_failure = plate_buckling_stress(geometry, 4, layers, a)
     max_shear = max(shear_stress_diagram, key = lambda x: abs(x[1]))[1]
@@ -286,7 +381,9 @@ def initialize_loads():
 
 def simulation_safety_factors(loads, span, I):
     min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
+
     for x in range(span - loads[-1][1]):
+        print(x)
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I,b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
@@ -299,11 +396,13 @@ def simulation_safety_factors(loads, span, I):
         BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
+        print(max_flex_tens)
         FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
 
         if abs(FOS_flex_tens) < min_safety_factors["flexural tension"]:
             min_safety_factors["flexural tension"] = abs(FOS_flex_tens)
         max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
+        print(max_flex_comp)
         FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
 
         if FOS_flex_comp < min_safety_factors["flexural compression"]:
@@ -405,11 +504,12 @@ if __name__ == "__main__":
     #print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
     #I = second_moment_of_area(geometry, centroidal_axis)
     #print(f"Second Moment of Area (I): {I:.4f} mm^4")
-    loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
+    #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
+    loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
     #loads = [(50, 25), (100, 1275)]
     span = 1300
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
-    I = [[418480.7, geometry, (0, 1300), 1]]
+    I = [[418480.7, geometry, (0, 1200), 1]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
     print(min_safety_factors)
