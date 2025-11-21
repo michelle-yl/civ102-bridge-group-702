@@ -128,9 +128,12 @@ def calculate_Qmax(geometry):
             geo_below_ybar.pop(list(geo_below_ybar.keys())[list(geo_below_ybar.values()).index(component)])
         if component[2] + component[0][1] > y_bar:
             component[2] = y_bar - component[0][1]
-    y_bar_below = calculate_centroidal_axis(geo_below_ybar)
-    area_below = sum(areas(geo_below_ybar).values())
-    return area_below * (y_bar - y_bar_below)
+    Q = 0
+    for component in geo_below_ybar.values():
+        area = component[1] * component[2]
+        d = (component[0][1] + component[2]/2) - y_bar
+        Q += area * d
+    return Q
         
 
 # find BMD
@@ -158,7 +161,6 @@ def flexural_stress_diagram(BMD, I):
         y_bar = calculate_centroidal_axis(geometry)
         y_compression = y_bar - height
         y_tension = y_bar
-        print(BMD)
         
         for x in range(I[i][2][0], I[i][2][1]+1):
             
@@ -183,7 +185,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
 
     # case 1: buckling of compressive flange between webs
     if case == 1:
-        b = list(geometry.values())[-1][1] - list(geometry.values())[-layers][0][0] * 2 # width of flange between webs
+        b = list(geometry.values())[-1][1] - (list(geometry.values())[-(layers+1)][0][0] + 1.27) * 2 # width of flange between webs
         k = 4
         sigma = k * (3.14159**2) * 4000 * (t / b)**2 / (12 * (1 - 0.2**2))
         return sigma
@@ -198,7 +200,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
     # case 3: buckling of the webs due to the flexural stresses
     if case == 3:
         t = 1.27 # thickness of web
-        h = list(geometry.values())[-layers][2] # height of web
+        h = list(geometry.values())[-(layers+3)][0][1] + list(geometry.values())[-(layers+3)][2] + 1.27 - calculate_centroidal_axis(geometry) # height of web
         k = 6
         sigma = k * (3.14159**2) * 4000 * (t / h)**2 / (12 * (1 - 0.2**2))
         return sigma
@@ -206,7 +208,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
     # case 4: buckling of the webs due to the shear stresses
     if case == 4:
         t = 1.27 # thickness of web
-        h = list(geometry.values())[-layers][2] # height of web
+        h = list(geometry.values())[-(layers+3)][2] # height of web
         k = 5
         tau = k * (3.14159**2) * 4000 * ((t / h)**2 + (t / a)**2) / (12 * (1 - 0.2**2))
         return tau
@@ -408,6 +410,6 @@ if __name__ == "__main__":
     span = 1300
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
-    I = [[13690000, geometry, (0, 1300), 1]]
+    I = [[418480.7, geometry, (0, 1300), 1]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
     print(min_safety_factors)
