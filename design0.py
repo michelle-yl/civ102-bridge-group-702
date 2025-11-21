@@ -397,9 +397,9 @@ def safety_factor_thin_plate(In, flexural_compression_diagram, shear_stress_diag
     return FOS1, FOS2, FOS3, FOS4
 
 def initialize_loads():
-    return [(400/6, 0), (400/6, 176), (400/6, 340), (400/6, 516), (400/6, 680), (400/6, 856)]
+    return [[400/6, 0], [400/6, 176], [400/6, 340], [400/6, 516], [400/6, 680], [400/6, 856]]
 
-def simulation_safety_factors(loads, span, I):
+def simulation_safety_factors(loads, span, I, b=None):
     min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
 
     for x in range(span - loads[-1][1]):
@@ -510,7 +510,7 @@ def simulation_safety_factors(loads, span, I):
 
     return min_safety_factors
 
-def simulation_safety_factors_across_bridge(loads, span, I):
+def simulation_safety_factors_across_bridge(span, I, b=None):
     
     FOS_shear_diagram = []
     FOS_flex_tens_diagram = []
@@ -522,7 +522,7 @@ def simulation_safety_factors_across_bridge(loads, span, I):
     FOS_case_3_diagram = []
     FOS_case_4_diagram = []
     
-    initialize_loads()
+    loads = initialize_loads()
 
     for x in range(span - loads[-1][1]):
         # shear stress
@@ -594,7 +594,7 @@ if __name__ == "__main__":
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
     #loads = [(50, 25), (100, 1275)]
-    span = 1300
+    span = 1200
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
     I = [[418480.7, geometry, (0, 1200), 1]]
