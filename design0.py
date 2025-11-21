@@ -403,7 +403,6 @@ def simulation_safety_factors(loads, span, I):
     min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
 
     for x in range(span - loads[-1][1]):
-        print(x)
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I,b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
@@ -416,13 +415,11 @@ def simulation_safety_factors(loads, span, I):
         BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
-        print(max_flex_tens)
         FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
 
         if abs(FOS_flex_tens) < min_safety_factors["flexural tension"]:
             min_safety_factors["flexural tension"] = abs(FOS_flex_tens)
         max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
-        print(max_flex_comp)
         FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
 
         if FOS_flex_comp < min_safety_factors["flexural compression"]:
@@ -561,10 +558,10 @@ def simulation_safety_factors_across_bridge(loads, span, I):
         # plate buckling
         for i in range(len(I)):
             FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
-            FOS_case_1_diagram.append(x, FOS1)
-            FOS_case_2_diagram.append(x, FOS2)
-            FOS_case_3_diagram.append(x, FOS3)
-            FOS_case_4_diagram.append(x, FOS4)
+            FOS_case_1_diagram.append([x, FOS1])
+            FOS_case_2_diagram.append([x, FOS2])
+            FOS_case_3_diagram.append([x, FOS3])
+            FOS_case_4_diagram.append([x, FOS4])
         
         loads = update_loads(loads, "right")
 
@@ -600,4 +597,9 @@ if __name__ == "__main__":
     #A_y, B_y = reaction_forces(loads, span)
     I = [[418480.7, geometry, (0, 1200), 1]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
+    print(min_safety_factors)
+    geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
+    I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
+    min_safety_factors = simulation_safety_factors(loads, span, I)
+    print("iteration 1")
     print(min_safety_factors)
