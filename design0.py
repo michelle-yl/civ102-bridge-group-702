@@ -407,7 +407,6 @@ def simulation_safety_factors(loads, span, I, b=2.54):
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
         FOS_shear = safety_factor(max_shear, "shear")
-        print(FOS_shear, abs(FOS_shear), min_safety_factors["shear"])
         if abs(FOS_shear) < min_safety_factors["shear"]:
             min_safety_factors["shear"] = abs(FOS_shear)
         
@@ -508,7 +507,7 @@ def simulation_safety_factors(loads, span, I, b=2.54):
                 min_safety_factors["case 4"] = abs(FOS4)
         
         loads = update_loads(loads, "left")
-    print(min_safety_factors["shear"])
+
     return min_safety_factors
 
 def simulation_safety_factors_across_bridge(span, I, b=None):
@@ -598,9 +597,9 @@ if __name__ == "__main__":
     span = 1260
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
-    I = [[418480.7, geometry, (0, 1200), 1]]
-    # min_safety_factors = simulation_safety_factors(loads, span, I)
-    # print(min_safety_factors)
+    #I = [[418480.7, geometry, (0, 1200), 1]]
+    #min_safety_factors = simulation_safety_factors(loads, span, I)
+    #print(min_safety_factors)
     geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
     I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
     min_safety_factors = simulation_safety_factors(loads, span, I)
