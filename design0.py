@@ -306,34 +306,37 @@ def plate_buckling_stress(geometry, case, layers, a = None):
 
 # shear glue stress
 # I = [[I, geometry, (start, end), layers], ...]
-def shear_glue_stress_diagram(shear_force_diagram, I, level): # level is an integer indicating which glue line to analyze, counting from the top down
+def shear_glue_stress_diagram(shear_force_diagram, I, type): # type is a string (either "glue tabs" or "sheets")
     shear_glue_stresses_diagram = []
     for i in range(len(I)):
         geometry = I[i][1]
         layers = I[i][3]
-        if level == 1 and layers == 1:
-            upper_component_dimensions = list(geometry.values())[-level]
-            d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
-            A = upper_component_dimensions[1] * upper_component_dimensions[2]
-            b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the glue line length
+        if type == "glue tabs":
+            if layers == 1:
+                level = 1
+                upper_component_dimensions = list(geometry.values())[-level]
+                d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
+                A = upper_component_dimensions[1] * upper_component_dimensions[2]
+                b = list(geometry.values())[-2][1]*2 # assume the second-to-top component is the web with glue tab, so its width*2 is the total glue line length
+            if layers == 2:
+                level = 2
+                upper_component_dimensions = list(geometry.values())[-level]
+                second_upper_component_dimensions = list(geometry.values())[-(level-1)]
+                d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
+                A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2])
+                b = list(geometry.values())[-3][1]*2 # assume the third-to-top component is the web with glue tab, so its width*2 is the glue line length
         
-        if level == 1 and layers == 2:
+        if type == "sheets":
+            layers == 2
             upper_component_dimensions = list(geometry.values())[-level]
             second_upper_component_dimensions = list(geometry.values())[-(level-1)]
             A = upper_component_dimensions[1] * upper_component_dimensions[2]
             d = upper_component_dimensions[0][1] + upper_component_dimensions[2]/2 - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to top shear-stress free surface
             b = second_upper_component_dimensions[1]
-
-        if level == 2 and layers == 2:
-            upper_component_dimensions = list(geometry.values())[-level]
-            second_upper_component_dimensions = list(geometry.values())[-(level-1)]
-            d = calculate_centroidal_axis({"upper": upper_component_dimensions, "second_upper": second_upper_component_dimensions}) - calculate_centroidal_axis(geometry) # d from centroid of area above glue line to centroidal axis
-            A = (upper_component_dimensions[1] * upper_component_dimensions[2]) + (second_upper_component_dimensions[1] * second_upper_component_dimensions[2])
-            b = list(geometry.values())[-3][1]*2 # assume the third-to-top component is the web with glue tab, so its width*2 is the glue line length
         
         Q = A * d
 
-        for x in range(I[i][2][0], I[i][2][1]+1):
+        for x in range(I[i][2][0], I[i][2][1] + 1):
             shear_glue_stress = shear_force_diagram[x][1] * Q / (I[i][0] * b)
             shear_glue_stresses_diagram.append([x, shear_glue_stress])
 
@@ -418,8 +421,6 @@ def simulation_safety_factors(loads, span, I):
         
         # plate buckling
         for i in range(len(I)):
-            geometry = I[i][1]
-            layers = I[i][3]
             FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
             if abs(FOS1) < min_safety_factors["case 1"]:
                 min_safety_factors["case 1"] = abs(FOS1)
@@ -467,8 +468,6 @@ def simulation_safety_factors(loads, span, I):
         
         # plate buckling
         for i in range(len(I)):
-            geometry = I[i][1]
-            layers = I[i][3]
             FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
             if abs(FOS1) < min_safety_factors["case 1"]:
                 min_safety_factors["case 1"] = abs(FOS1)
@@ -482,6 +481,63 @@ def simulation_safety_factors(loads, span, I):
         loads = update_loads(loads, "left")
 
     return min_safety_factors
+
+def simulation_safety_factors_across_bridge(loads, span, I):
+    
+    FOS_shear_diagram = []
+    FOS_flex_tens_diagram = []
+    FOS_flex_comp_diagram = []
+    FOS_cement_shear_diagram_glue_tabs = []
+    FOS_cement_shear_diagram_sheets = []
+    FOS_case_1_diagram = []
+    FOS_case_2_diagram = []
+    FOS_case_3_diagram = []
+    FOS_case_4_diagram = []
+    
+    for x in range(span - loads[-1][1]):
+        # shear stress
+        shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
+        max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
+        FOS_shear = safety_factor(max_shear, "shear")
+        FOS_shear_diagram.append([x, FOS_shear])
+        
+        # flexural stress and flexural tension
+
+        BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
+        flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
+        max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
+        FOS_flex_tens = safety_factor(max_flex_tens, "tensile")
+        FOS_flex_tens_diagram.append([x, FOS_shear])
+        
+        max_flex_comp = max(flex_comp, key = lambda x: abs(x[1]))[1]
+        FOS_flex_comp = safety_factor(abs(max_flex_comp), "compressive")
+        FOS_flex_comp_diagram.append([x, FOS_shear])
+
+        # cement shear stress
+        reaction_forces_list = reaction_forces(loads, span)
+        shear_glue_stress_profile_glue_tabs = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "glue tabs")
+        max_cement_shear_glue_tabs = max(shear_glue_stress_profile_glue_tabs, key = lambda x: abs(x[1]))[1]
+        FOS_cement_shear_glue_tabs = safety_factor(max_cement_shear_glue_tabs, "cement_shear")
+        FOS_cement_shear_diagram_glue_tabs.append([x, FOS_cement_shear_glue_tabs])
+
+        shear_glue_stress_profile_sheets = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "sheets")
+        max_cement_shear_sheets = max(shear_glue_stress_profile_sheets, key = lambda x: abs(x[1]))[1]
+        FOS_cement_shear_sheets = safety_factor(max_cement_shear_sheets, "cement_shear")
+        FOS_cement_shear_diagram_sheets.append([x, FOS_cement_shear_sheets])
+        
+        
+        # plate buckling
+        for i in range(len(I)):
+            FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
+            FOS_case_1_diagram.append(x, FOS1)
+            FOS_case_2_diagram.append(x, FOS2)
+            FOS_case_3_diagram.append(x, FOS3)
+            FOS_case_4_diagram.append(x, FOS4)
+        
+        loads = update_loads(loads, "right")
+
+    return FOS_shear_diagram, FOS_flex_tens_diagram, FOS_flex_comp_diagram, FOS_cement_shear_diagram_glue_tabs, FOS_cement_shear_diagram_sheets, FOS_case_1_diagram, FOS_case_2_diagram, FOS_case_3_diagram, FOS_case_4_diagram
+
 
 def calculate_envs(load_mag, span, geometry, level):
     react = reaction_forces(load_mag, span)
