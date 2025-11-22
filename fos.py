@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from formatting import format_cursor
-import design0 as d0
+import design_calcs as d0
 
 def plot_env(span, geometry, b, level):
     I_list = [[d0.second_moment_of_area(geometry, d0.calculate_centroidal_axis(geometry)), geometry, (0, span), level]]
@@ -12,10 +12,11 @@ def plot_env(span, geometry, b, level):
         "FOS Plate Buckling Case 3", "FOS Plate Buckling Case 4"
     ]
 
-    fos_list = d0.simulation_safety_factors_across_bridge(span, I_list, b,"kN", geometry)
+    fos_list = d0.simulation_safety_factors_across_bridge(span, I_list, b,geometry)
     # print(fos_list[8])
     
     env = []
+    points = []
     for i in range(len(fos_list)):
         env.append([])
         for point in fos_list[i]:
@@ -30,7 +31,15 @@ def plot_env(span, geometry, b, level):
             y.append(abs(pt[1]))
         if x and y:
             plt.plot(x, y, label=labels[j])
+            point = plt.plot(x, y, 'o', alpha=0)[0]
+            points.append(point)
+
     plt.legend()
+    plt.title("FOS Envelopes for All Train Loading")
+    plt.xlabel("Train Loading Positions (mm)")
+    plt.ylabel("FOS Value")
+    plt.yscale("log")
+    format_cursor(points)
     plt.show()
 
 if __name__ == "__main__":

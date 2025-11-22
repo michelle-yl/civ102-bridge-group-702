@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from formatting import format_cursor
-import design0 as d0
+import design_calcs as d0
 
 def init_plots(loads, span, geometry, level):
     env_max = []
