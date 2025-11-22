@@ -697,12 +697,13 @@ if __name__ == "__main__":
     #I = [[418480.7, geometry, (0, 1200), 1]]
     #min_safety_factors = simulation_safety_factors(loads, span, I)
     #print(min_safety_factors)
-    geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
-    I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
-    min_safety_factors = simulation_safety_factors(kN, span, I)
-    print(min_safety_factors)
+    #geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
+    #I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
+    #min_safety_factors = simulation_safety_factors(kN, span, I)
+    #print(min_safety_factors)
     #print(calculate_centroidal_axis(geometry2))
     #print(second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)))
+
     #geometry3 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
     #I = [[second_moment_of_area(geometry3, calculate_centroidal_axis(geometry3)), geometry3, (0, 1260), 3]]
     #min_safety_factors = simulation_safety_factors(kN, span, I)
@@ -710,10 +711,10 @@ if __name__ == "__main__":
     #print(calculate_centroidal_axis(geometry3))
     #print(second_moment_of_area(geometry3, calculate_centroidal_axis(geometry3)))
 
-    #geometry4 = {"A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
-    #I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
-    #min_safety_factors = simulation_safety_factors(kN, span, I)
-    #print(min_safety_factors)
-    #print(calculate_centroidal_axis(geometry4))
-    #print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
+    geometry4 = {"A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
+    I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
+    min_safety_factors = simulation_safety_factors(kN, span, I)
+    print(min_safety_factors)
+    print(calculate_centroidal_axis(geometry4))
+    print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
     
