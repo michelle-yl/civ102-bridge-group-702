@@ -305,6 +305,8 @@ def flexural_stress_diagram(BMD, I_list):
     
     for i in range(len(I_list)):  # run through each cross-section
 
+        geometry = I_list[i][1]
+
         upper_component_dimensions = list(geometry.values())[-1]
         height = upper_component_dimensions[0][1] + upper_component_dimensions[2]
         y_bar = calculate_centroidal_axis(geometry)
@@ -490,14 +492,29 @@ def safety_factor_thin_plate(I_n, flexural_compression_diagram, shear_stress_dia
 
 ''' Initializing loading distribution '''
 
+# set loading for 1000 N distributed among 3 train cars.  Puts the leftmost car wheel at x = 0.
 def initialize_loads():
     freight = 500/(1.38+1.1+1)
-    return [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1,856]]
+    return [[freight*1.38, 0], [freight*1.38, 176], [freight*1, 340], [freight*1, 516], [freight*1.1, 680], [freight*1.1, 856]]
 
+''' Calculate safety factors for one pass of a train '''
+
+# Calculates minimum safety factors for each of the 8 types of FOS for a pass of the train to the end of the bridge and back
 def simulation_safety_factors(loads, span, I, b=2.54):
+
+    # Parameters:
+    # loads: list of loads (N) and their positions along the span of the bridge (mm)
+    #   loads = [[load1, position1], [load2, position2], ...]
+    # span = length of bridge (mm)
+    # I: list of cross sections and their features
+    #   I_list = [[I_value, geometry, (start, end), layers], ...]
+    # b: width of cross-section at centroidal axis
+    # Returns a dictionary of the minimum safety factors for each type of failure
+
     min_safety_factors = {"flexural tension": math.inf, "flexural compression": math.inf, "shear": math.inf, "cement shear": math.inf, "case 1": math.inf, "case 2": math.inf, "case 3": math.inf, "case 4": math.inf} # [flexural tension, flexural compression, shear, cement shear, plate buckling case 1, case 2, case 3, case 4]
 
     for x in range(span - loads[-1][1]):
+       
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
@@ -506,7 +523,6 @@ def simulation_safety_factors(loads, span, I, b=2.54):
             min_safety_factors["shear"] = abs(FOS_shear)
         
         # flexural stress and flexural tension
-
         BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
@@ -522,6 +538,7 @@ def simulation_safety_factors(loads, span, I, b=2.54):
             min_safety_factors["flexural compression"] = FOS_flex_comp
 
         # cement shear stress
+        # two types to consider: shear stress between glue tabs and shear stress between layers of flange
         reaction_forces_list = reaction_forces(loads, span)
         shear_glue_stress_profile = shear_glue_stress_diagram(calculate_shear_force(loads, reaction_forces_list, span), I, "glue tabs")
         max_cement_shear = max(shear_glue_stress_profile, key = lambda x: abs(x[1]))[1]
@@ -538,7 +555,7 @@ def simulation_safety_factors(loads, span, I, b=2.54):
         
         # plate buckling
         for i in range(len(I)):
-            FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400) # I put a random a for now
+            FOS1, FOS2, FOS3, FOS4 = safety_factor_thin_plate(I[i], flex_comp, shear_stress_profile, 400)  # a must be hard-coded
             if abs(FOS1) < min_safety_factors["case 1"]:
                 min_safety_factors["case 1"] = abs(FOS1)
             if abs(FOS2) < min_safety_factors["case 2"]:
@@ -548,7 +565,9 @@ def simulation_safety_factors(loads, span, I, b=2.54):
             if abs(FOS4) < min_safety_factors["case 4"]:
                 min_safety_factors["case 4"] = abs(FOS4)
         
-        loads = update_loads(loads, "right")
+        loads = update_loads(loads, "right")  # shift loads right 1 mm and loop again
+
+    # train pass on the way back
 
     for x in range(span - loads[-1][1]):
 
@@ -602,11 +621,20 @@ def simulation_safety_factors(loads, span, I, b=2.54):
             if abs(FOS4) < min_safety_factors["case 4"]:
                 min_safety_factors["case 4"] = abs(FOS4)
         
-        loads = update_loads(loads, "left")
+        loads = update_loads(loads, "left") # shift loads left 1 mm and loop again
 
-    return min_safety_factors
+    return min_safety_factors # returns a dictionary = {'flexural tension': FOS, 'flexural compression': FOS, 'shear': FOS, 'cement shear': FOS, 'case 1': FOS, 'case 2': FOS, 'case 3': FOS, 'case 4': FOS}
 
+# Simulate minimum safety factors at every x-value for one pass of a train
 def simulation_safety_factors_across_bridge(span, I, b=None):
+
+    # Parameters:
+    # span = length of bridge (mm)
+    # I: list of lists of cross-sectional features (cross-sections change for different sections of the span)
+    #   I = [[I1, geometry1, (start, end)], [I2, geometry2, (start, end)]...]
+    # b = width of cross-section at centroidal axis (mm)
+    # Returns 9 lists of x-coordinate-FOS pairs
+    #   FOS_'type'_diagram = [[x1, FOS1], [x2, FOS2], ...] ---> 9 of these lists
     
     FOS_shear_diagram = []
     FOS_flex_tens_diagram = []
@@ -621,6 +649,7 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
     loads = initialize_loads()
 
     for x in range(span - loads[-1][1]+1):
+
         # shear stress
         shear_stress_profile = shear_stress_diagram(calculate_shear_force(loads, reaction_forces(loads, span), span), I, b)
         max_shear = max(shear_stress_profile, key = lambda x: abs(x[1]))[1]
@@ -628,7 +657,6 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
         FOS_shear_diagram.append([x, FOS_shear])
         
         # flexural stress and flexural tension
-
         BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
         flex_comp, flex_tens = flexural_stress_diagram(BMD, I)
         max_flex_tens = max(flex_tens, key = lambda x: abs(x[1]))[1]
@@ -662,7 +690,7 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
             FOS_case_4_diagram.append([x, FOS4])
         
         loads = update_loads(loads, "right")
-        # print(FOS_shear_diagram)
+        
     return FOS_shear_diagram, FOS_flex_tens_diagram, FOS_flex_comp_diagram, FOS_cement_shear_diagram_glue_tabs, FOS_cement_shear_diagram_sheets, FOS_case_1_diagram, FOS_case_2_diagram, FOS_case_3_diagram, FOS_case_4_diagram
 
 
@@ -682,22 +710,22 @@ def calculate_envs(load_mag, span, geometry, level):
     return [sf, bm, comp, tens, glue]
     
 if __name__ == "__main__":
-    geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(88.73, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
-    centroidal_axis = calculate_centroidal_axis(geometry)
-    print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
-    I = second_moment_of_area(geometry, centroidal_axis)
-    print(f"Second Moment of Area (I): {I:.4f} mm^4")
+    #geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(88.73, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
+    #centroidal_axis = calculate_centroidal_axis(geometry)
+    #print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
+    #I = second_moment_of_area(geometry, centroidal_axis)
+    #print(f"Second Moment of Area (I): {I:.4f} mm^4")
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
-    loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
-    # freight = 500/(1.38+1.1+1)
-    # kN = [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1, 856]]
+    #loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
+    freight = 500/(1.38+1.1+1)
+    kN = [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1, 856]]
     #loads = [(50, 25), (100, 1275)]
     span = 1260
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
-    I = [[418480.7, geometry, (0, 1260), 1]]
-    min_safety_factors = simulation_safety_factors(loads, span, I)
-    print(min_safety_factors)
+    #I = [[418480.7, geometry, (0, 1260), 1]]
+    #min_safety_factors = simulation_safety_factors(loads, span, I)
+    #print(min_safety_factors)
     #geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
     #I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
     #min_safety_factors = simulation_safety_factors(kN, span, I)
@@ -719,12 +747,14 @@ if __name__ == "__main__":
     #print(calculate_centroidal_axis(geometry4))
     #print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
 
-    # geometry4 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 136.9], "A3": [(85, 1.27), 1.27, 136.9], "A4": [(10, 136.19), 6.27, 1.27], "A5": [(83.73, 136.19), 6.27, 1.27], "A6": [(0, 137.46), 100, 1.27], "A7": [(0, 138.73), 100, 1.27], "A8": [(0, 140), 100, 1.27]}
-    # I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
-    # min_safety_factors = simulation_safety_factors(kN, span, I)
-    # print(min_safety_factors)
-    # print(calculate_centroidal_axis(geometry4))
-    # print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
+    geometry4 = {"A2": [(15, 0), 1.27, 95], "A3": [(93.73, 0), 1.27, 95], "A4": [(0, 95), 15, 1.27], "A5": [(15, 95), 15, 1.27], "A6": [(88.73, 95), 6.27, 1.27], "A7": [(95, 95), 15, 1.27], "A8": [(0, 96.27), 110, 1.27], "A9": [(0, 97.54), 110, 1.27], "A10": [(0, 98.81), 110, 1.27]}
+    I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
+    min_safety_factors = simulation_safety_factors(kN, span, I)
+    print(min_safety_factors)
+    print(calculate_centroidal_axis(geometry4))
+    print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
+
+    #geometry4 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 134.92], "A3": [(85, 1.27), 1.27, 134.92], "A4": [(10, 136.19), 6.27, 1.27], "A5": [(83.73, 136.19), 6.27, 1.27], "A6": [(0, 137.46), 100, 1.27], "A7": [(0, 138.73), 100, 1.27]}
 
     
     
