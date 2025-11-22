@@ -14,7 +14,7 @@ def areas(geometry):
     #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
     #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
     #       Anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
-    #       width = width of componaent (mm)
+    #       width = width of component (mm)
     #       height = height of component (mm)
     # Returns a list of each component's area
     #   areas_list = [area1, area2, ...]
@@ -350,6 +350,7 @@ def plate_buckling_stress(geometry, case, layers, a = None):
         b = list(geometry.values())[-(layers+2)][0][0] # length of flange tip beyond web
         k = 0.425
         sigma = k * (3.14159**2) * 4000 * (t / b)**2 / (12 * (1 - 0.2**2))
+        print(sigma)
         return sigma
     
     # case 3: buckling of the webs due to the flexural stresses
@@ -660,7 +661,7 @@ def simulation_safety_factors_across_bridge(span, I, b=None):
             FOS_case_4_diagram.append([x, FOS4])
         
         loads = update_loads(loads, "right")
-        
+        # print(FOS_shear_diagram)
     return FOS_shear_diagram, FOS_flex_tens_diagram, FOS_flex_comp_diagram, FOS_cement_shear_diagram_glue_tabs, FOS_cement_shear_diagram_sheets, FOS_case_1_diagram, FOS_case_2_diagram, FOS_case_3_diagram, FOS_case_4_diagram
 
 
@@ -688,7 +689,7 @@ if __name__ == "__main__":
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
     freight = 500/(1.38+1.1+1)
-    kN = [[freight*1.38/2, 0], [freight*1.38/2, 176], [freight*1/2, 340], [freight*1/2, 516], [freight*1.1/2, 680], [freight*1.1/2, 856]]
+    kN = [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1,856]]
     #loads = [(50, 25), (100, 1275)]
     span = 1260
     b = 2.54
@@ -710,24 +711,10 @@ if __name__ == "__main__":
     #print(calculate_centroidal_axis(geometry3))
     #print(second_moment_of_area(geometry3, calculate_centroidal_axis(geometry3)))
 
-    #geometry4 = {"A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
-    #I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
-    #min_safety_factors = simulation_safety_factors(kN, span, I)
-    #print(min_safety_factors)
-    #print(calculate_centroidal_axis(geometry4))
-    #print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
-
-    geometry5 = {"A2": [(20, 1.27), 1.27, 72.46], "A3": [(95, 1.27), 1.27, 72.46], "A4": [(20, 73.73), 6.27, 1.27], "A5": [(93.73, 73.73), 6.27, 1.27], "A7": [(0, 77.54), 120, 1.27], "A8": [(0, 78.81), 120, 1.27]}
-    I = [[second_moment_of_area(geometry5, calculate_centroidal_axis(geometry5)), geometry5, (0, 1260), 2]]
+    geometry4 = {"A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
+    I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
     min_safety_factors = simulation_safety_factors(kN, span, I)
     print(min_safety_factors)
-    print(calculate_centroidal_axis(geometry5))
-    print(second_moment_of_area(geometry5, calculate_centroidal_axis(geometry5)))
-    
-    geometry5 = {"A2": [(20, 1.27), 1.27, 72.46], "A3": [(95, 1.27), 1.27, 72.46], "A4": [(20, 73.73), 6.27, 1.27], "A5": [(93.73, 73.73), 6.27, 1.27], "A7": [(0, 77.54), 120, 1.27], "A8": [(0, 78.81), 120, 1.27]}
-    I = [[second_moment_of_area(geometry5, calculate_centroidal_axis(geometry5)), geometry5, (0, 1260), 2]]
-    min_safety_factors = simulation_safety_factors(kN, span, I)
-    print(min_safety_factors)
-    print(calculate_centroidal_axis(geometry5))
-    print(second_moment_of_area(geometry5, calculate_centroidal_axis(geometry5)))
+    print(calculate_centroidal_axis(geometry4))
+    print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
     
