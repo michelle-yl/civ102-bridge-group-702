@@ -33,7 +33,7 @@ def find_centroids(geometry):
     # Parameters:
     # Geometry: dictionary of components with their location and dimensions
     #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
-    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top, left to right of cross-section.
     #       Anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
     #       width = width of component (mm)
     #       height = height of component (mm)
@@ -54,7 +54,7 @@ def calculate_centroidal_axis(geometry):
     # Parameters:
     # geometry: dictionary of components with their location and dimensions
     #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
-    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top, left to right of cross-section.
     #       Anchor = (x, y) --> coordinate of bottom-left corner of component (mm).  y = 0 occurs at the bottom of the cross-section.
     #       width = width of component (mm)
     #       height = height of component (mm)
@@ -93,7 +93,7 @@ def second_moment_of_area(geometry, y_bar):
     # Parameters:
     # geometry: dictionary of components with their location and dimensions
     #   geometry = {A1: [anchor, width, height], A2: [anchor, width, height], ..., An: [anchor, width, height]}
-    #       An is the nth component of the cross-section.  Components are listed from bottom to top of cross-section.
+    #       An is the nth component of the cross-section.  Components are listed from bottom to top, left to right of cross-section.
     #       Anchor = (x, y) --> coordinate of bottom-left corner of component.  y = 0 occurs at the bottom of the cross-section.
     #       width = width of component
     #       height = height of component
@@ -199,7 +199,7 @@ def calculate_shear_force(loads, reaction_forces, span):
 
     for x in range(span + 1):  # run through every mm increment along the bridge and check if there is a force there.  If so, update V.
         for force in reaction_forces:  # check if there is a reaction force at that x-value
-            if force[1] == x and x != 1200:
+            if force[1] == x and x != span:
                 V += force[0]  # add reaction force, since reaction forces point upwards
         for load in loads:  # check if there is a load at that x-value
             if load[1] == x:
@@ -220,17 +220,17 @@ def calculate_Qmax(geometry):
     geo_below_ybar = copy.deepcopy(geometry)  # initialize geometry below y_bar
     y_bar = calculate_centroidal_axis(geometry)
 
-    for component in copy.deepcopy(geo_below_ybar).values():
+    for key, component in copy.deepcopy(geo_below_ybar).items():
         if component[0][1] >= y_bar:
             geo_below_ybar.pop(list(geo_below_ybar.keys())[list(geo_below_ybar.values()).index(component)])  # remove components above y_bar
-        if component[2] + component[0][1] > y_bar:
-            component[2] = y_bar - component[0][1]  # cut the heights of the webs to y-bar
+        elif component[2] + component[0][1] > y_bar:
+            geo_below_ybar[key][2] = y_bar - component[0][1]  # cut the heights of the webs to y-bar
     
     Q = 0  # initialize Q
 
     for component in geo_below_ybar.values():
         area = component[1] * component[2]
-        d = (component[0][1] + component[2]/2) - y_bar  # distance between y-bar and centroid of area below y-bar
+        d = y_bar - (component[0][1] + component[2]/2)  # distance between y-bar and centroid of area below y-bar
         Q += area * d
     
     return Q # (mm^3)
@@ -483,11 +483,12 @@ def safety_factor_thin_plate(I_n, flexural_compression_diagram, shear_stress_dia
     FOS3 = case_3_failure / abs(max_flex_comp_case_3)
 
     case_4_failure = plate_buckling_stress(geometry, 4, layers, a)
-    max_shear = max(shear_stress_diagram[start:end], key = lambda x: abs(x[1]))[1]
+    max_shear = max(shear_stress_diagram[start:end], key = lambda x: abs(x[1]))[1] # use max shear
     FOS4 = case_4_failure / abs(max_shear) 
 
     return FOS1, FOS2, FOS3, FOS4
 
+''' Initializing loading distribution '''
 
 def initialize_loads():
     freight = 500/(1.38+1.1+1)
@@ -681,22 +682,22 @@ def calculate_envs(load_mag, span, geometry, level):
     return [sf, bm, comp, tens, glue]
     
 if __name__ == "__main__":
-    geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(88.73, 1.27), 1.27, 72.46], "A3": [(10, 1.27), 1.27, 72.46], "A4": [(83.73, 73.73), 6.27, 1.27], "A5": [(10, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
-    #centroidal_axis = calculate_centroidal_axis(geometry)
-    #print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
-    #I = second_moment_of_area(geometry, centroidal_axis)
-    #print(f"Second Moment of Area (I): {I:.4f} mm^4")
+    geometry = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(88.73, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27]}
+    centroidal_axis = calculate_centroidal_axis(geometry)
+    print(f"Centroidal Axis (ȳ): {centroidal_axis:.4f} mm")
+    I = second_moment_of_area(geometry, centroidal_axis)
+    print(f"Second Moment of Area (I): {I:.4f} mm^4")
     #loads = [[67.5, 172], [67.5, 348], [67.5, 512], [67.5, 688], [91.0, 852], [91.0, 1028]]
     loads = [[400/6, 172], [400/6, 348], [400/6, 512], [400/6, 688], [400/6, 852], [400/6, 1028]]
-    freight = 500/(1.38+1.1+1)
-    kN = [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1,856]]
+    # freight = 500/(1.38+1.1+1)
+    # kN = [[freight*1.38,0], [freight*1.38,176], [freight*1, 340], [freight*1,516], [freight*1.1, 680], [freight*1.1, 856]]
     #loads = [(50, 25), (100, 1275)]
     span = 1260
     b = 2.54
     #A_y, B_y = reaction_forces(loads, span)
-    #I = [[418480.7, geometry, (0, 1200), 1]]
-    #min_safety_factors = simulation_safety_factors(loads, span, I)
-    #print(min_safety_factors)
+    I = [[418480.7, geometry, (0, 1260), 1]]
+    min_safety_factors = simulation_safety_factors(loads, span, I)
+    print(min_safety_factors)
     #geometry2 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27]}
     #I = [[second_moment_of_area(geometry2, calculate_centroidal_axis(geometry2)), geometry2, (0, 1260), 2]]
     #min_safety_factors = simulation_safety_factors(kN, span, I)
@@ -711,10 +712,19 @@ if __name__ == "__main__":
     #print(calculate_centroidal_axis(geometry3))
     #print(second_moment_of_area(geometry3, calculate_centroidal_axis(geometry3)))
 
-    geometry4 = {"A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
-    I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
-    min_safety_factors = simulation_safety_factors(kN, span, I)
-    print(min_safety_factors)
-    print(calculate_centroidal_axis(geometry4))
-    print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
+    #geometry4 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 72.46], "A3": [(85, 1.27), 1.27, 72.46], "A4": [(10, 73.73), 6.27, 1.27], "A5": [(83.73, 73.73), 6.27, 1.27], "A6": [(0, 75), 100, 1.27], "A7": [(0, 77.54), 100, 1.27], "A8": [(0, 78.81), 100, 1.27]}
+    #I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
+    #min_safety_factors = simulation_safety_factors(kN, span, I)
+    #print(min_safety_factors)
+    #print(calculate_centroidal_axis(geometry4))
+    #print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
+
+    # geometry4 = {"A1": [(10, 0), 80, 1.27], "A2": [(10, 1.27), 1.27, 136.9], "A3": [(85, 1.27), 1.27, 136.9], "A4": [(10, 136.19), 6.27, 1.27], "A5": [(83.73, 136.19), 6.27, 1.27], "A6": [(0, 137.46), 100, 1.27], "A7": [(0, 138.73), 100, 1.27], "A8": [(0, 140), 100, 1.27]}
+    # I = [[second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)), geometry4, (0, 1260), 3]]
+    # min_safety_factors = simulation_safety_factors(kN, span, I)
+    # print(min_safety_factors)
+    # print(calculate_centroidal_axis(geometry4))
+    # print(second_moment_of_area(geometry4, calculate_centroidal_axis(geometry4)))
+
+    
     
