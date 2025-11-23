@@ -232,8 +232,7 @@ def calculate_Qmax(geometry):
         area = component[1] * component[2]
         d = y_bar - (component[0][1] + component[2]/2)  # distance between y-bar and centroid of area below y-bar
         Q += area * d
-    print("Q!!!")
-    print(Q)
+
     return Q # (mm^3)
 
 # Finds maximum shear stress along span of bridge, accounting for changing I values for different sections.
@@ -521,8 +520,6 @@ def simulation_safety_factors(loads, span, I, b=2.54):
         FOS_shear = safety_factor(max_shear, "shear")
         if abs(FOS_shear) < min_safety_factors["shear"]:
             min_safety_factors["shear"] = abs(FOS_shear)
-            print("SHEAR----------------------------------------")
-            print(max_shear)
         
         # flexural stress and flexural tension
         BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
