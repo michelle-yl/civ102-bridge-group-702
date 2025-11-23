@@ -233,7 +233,6 @@ def calculate_Qmax(geometry):
         d = y_bar - (component[0][1] + component[2]/2)  # distance between y-bar and centroid of area below y-bar
         Q += area * d
 
-    print(Q)
     return Q # (mm^3)
 
 # Finds maximum shear stress along span of bridge, accounting for changing I values for different sections.
@@ -521,6 +520,8 @@ def simulation_safety_factors(loads, span, I, b=2.54):
         FOS_shear = safety_factor(max_shear, "shear")
         if abs(FOS_shear) < min_safety_factors["shear"]:
             min_safety_factors["shear"] = abs(FOS_shear)
+            print("Max Shear Stress")
+            print(max_shear)
         
         # flexural stress and flexural tension
         BMD = calculate_BMD(calculate_shear_force(loads, reaction_forces(loads, span), span))
@@ -576,6 +577,7 @@ def simulation_safety_factors(loads, span, I, b=2.54):
         FOS_shear = safety_factor(max_shear, "shear")
         if abs(FOS_shear) < min_safety_factors["shear"]:
             min_safety_factors["shear"] = abs(FOS_shear)
+            
         
         # flexural stress and flexural tension
 
@@ -762,14 +764,14 @@ if __name__ == "__main__":
     span = 1260
     b = 2.54
     
-    #loads = [[67.5, 0], [67.5, 176], [67.5, 340], [67.5, 516], [91.0, 680], [91.0, 856]]
+    loads = [[67.5, 0], [67.5, 176], [67.5, 340], [67.5, 516], [91.0, 680], [91.0, 856]]
 
-    freight = 510/(1.38+1.1+1)
-    kN = [[freight*1.38, 0], [freight*1.38, 176], [freight*1, 340], [freight*1, 516], [freight*1.1, 680], [freight*1.1, 856]]
+    #freight = 510/(1.38+1.1+1)
+    #kN = [[freight*1.38, 0], [freight*1.38, 176], [freight*1, 340], [freight*1, 516], [freight*1.1, 680], [freight*1.1, 856]]
     
     I = [[I_value, geometry, (0, 1260), 2]]
 
-    min_safety_factors = simulation_safety_factors(kN, span, I)
+    min_safety_factors = simulation_safety_factors(loads, span, I)
     
     print_bridge_features(min_safety_factors, geometry)
     
