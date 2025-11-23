@@ -821,7 +821,7 @@ if __name__ == "__main__":
     #min_safety_factors = simulation_safety_factors(loads, span, I)
     
 
-    print_bridge_features(min_safety_factors, geometry)
+    # print_bridge_features(min_safety_factors, geometry)
 
 
 
