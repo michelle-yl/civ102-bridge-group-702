@@ -1,5 +1,5 @@
+# formatting.py formats the cursor for all plots, such that coordinate values can be shown upon hover
 import mplcursors
-
 
 # shows coordinate values when hovering over plot with cursor
 def format_cursor(points):

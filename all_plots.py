@@ -1,6 +1,6 @@
 # all_plots.py generates envelopes for shear force, bending moment, flexural compression, flexural tension, and glue shear stress
 
-# Importing "matplotlib" to generate graphs, "format_cursor" for graph hover tool, "BDP_calcs" file for 
+# Importing "matplotlib" to generate graphs, "format_cursor" for graph hover tool, "BDP_calcs" file for calculation functions
 import matplotlib.pyplot as plt
 from formatting import format_cursor
 import BDP_calcs as bdp

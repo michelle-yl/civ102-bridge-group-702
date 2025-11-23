@@ -1,6 +1,6 @@
 # fos.py generates factor of safety envelopes for shear force, flexural tension, flexural compression, shear in glue tabs, shear in glue sheets, and all 4 cases of plate buckling
 
-# Importing "matplotlib" to generate graphs, "format_cursor" for graph hover tool, "BDP_calcs" file for 
+# Importing "matplotlib" to generate graphs, "format_cursor" for graph hover tool, "BDP_calcs" file for calculation functions
 import matplotlib.pyplot as plt
 from formatting import format_cursor
 import BDP_calcs as bdp
